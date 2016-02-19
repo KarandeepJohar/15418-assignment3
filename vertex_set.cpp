@@ -17,22 +17,56 @@
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
   // TODO: Implement
-  return NULL;
+	VertexSet* vs = new VertexSet();
+	vs->size = 0;
+  vs->capacity = capacity;
+  vs->vertices = new Vertex[capacity];
+  // std::vector<Vertex> vs->vertices(capacity);
+  vs->numNodes = numNodes;
+  vs->type = type;
+  return vs;
 }
 
 void freeVertexSet(VertexSet *set)
 {
+  delete set->vertices;
+  delete set;
   // TODO: Implement
 }
 
 void addVertex(VertexSet *set, Vertex v)
 {
+  // set->size++;
+  for (int i = 0; i < set->size; ++i)
+  {
+    if (set->vertices[i]==v)
+    {
+      return;
+    }
+  }
+  ENSURES(set->size<= set->size);
+  set->vertices[set->size++]=v;
   // TODO: Implement
 }
 
 void removeVertex(VertexSet *set, Vertex v)
 {
+  ENSURES(set->size>0);
+  int i=0;
+  for ( i = 0; i < set->size; ++i)
+  {
+    if (set->vertices[i]==v)
+    {
+      break;
+    }
+  }
+  for (; i < set->size-1; ++i)
+  {
+    set->vertices[i]=set->vertices[i+1];
+  }
+  set->size--;
   // TODO: Implement
+
 }
 
 /**
@@ -44,7 +78,7 @@ VertexSet* vertexUnion(VertexSet *u, VertexSet* v)
 
   // STUDENTS WILL ONLY NEED TO IMPLEMENT THIS FUNCTION IN PART 3 OF
   // THE ASSIGNMENT
-
+  
   return NULL;
 }
 
