@@ -36,8 +36,17 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
     bool removeDuplicates=true)
 {
-  // TODO: Implement
-  return NULL;
+  VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
+
+  for (int i=0; i<u->size; i++) {
+    const Vertex* start = outgoing_begin(g, u->vertices[i]);
+    const Vertex* end = outgoing_end(g, u->vertices[i]);
+    for(const Vertex* v=start; v!=end; v++) {
+      if (f.cond(*v) && f.update(u->vertices[i], *v))
+        addVertex(trueResult, u->vertices[i]);
+    }
+  }
+  return trueResult;
 }
 
 
@@ -62,8 +71,18 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 template <class F>
 static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
 {
-  // TODO: Implement
-  
+  if (returnSet) {
+    VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
+    bool result;
+    for (int i=0; i< u->size; i++) {
+      result = f(u->vertices[i]);
+      if(result) {
+        addVertex(trueResult, u->vertices[i]);
+      }
+    }
+    return trueResult;
+  }
+
   return NULL;
 }
 
