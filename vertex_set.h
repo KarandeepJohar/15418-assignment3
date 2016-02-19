@@ -2,7 +2,7 @@
 #define __VERTEX_SET__
 
 #include "graph.h"
-
+#include <vector>
 typedef enum {
   SPARSE,
 } VertexSetType;
@@ -11,7 +11,7 @@ typedef struct {
   int size;     // Number of nodes in the set
   int numNodes; // Number of nodes in the graph
   VertexSetType type; 
-  Vertex* vertices;
+  std::vector<Vertex> vertices;
   int capacity;
 } VertexSet;
 
