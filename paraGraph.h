@@ -36,19 +36,22 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
     bool removeDuplicates=true)
 {
-  VertexSet *trueResult = newVertexSet(SPARSE, u->numNodes, u->numNodes);
+  VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
+  # pragma omp parallel for
   for (int i=0; i<u->size; i++) {
-    const Vertex* start = outgoing_begin(g, u->vertices[i]);
-    const Vertex* end = outgoing_end(g, u->vertices[i]);
+  	Vertex vertex=u->vertices[i];
+    const Vertex* start = outgoing_begin(g, vertex);
+    const Vertex* end = outgoing_end(g, vertex);
+    // # pragma omp parallel for
     for(const Vertex* v=start; v!=end; v++) {
 
-      if (f.cond(*v) && f.update(u->vertices[i], *v))
+      if (f.cond(*v) && f.update(vertex, *v))
       {	
+      	#pragma omp critical
         addVertex(trueResult, *v);
     	}
     }
   }
-  // printf("size %d\n",trueResult->size );
 
   return trueResult;
 }
@@ -77,17 +80,18 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
 {
   if (returnSet) {
     VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
-    bool result;
+    # pragma omp parallel for
     for (int i=0; i< u->size; i++) {
-      result = f(u->vertices[i]);
-      if(result) {
-        addVertex(trueResult, u->vertices[i]);
+      Vertex vertex = u->vertices[i];
+      if(f(vertex)) {
+      	#pragma omp critical
+        addVertex(trueResult, vertex);
       }
     }
-    // printf("size %d\n",trueResult->size );
     return trueResult;
   }
   else{
+  	# pragma omp parallel for
   	for (int i=0; i< u->size; i++) 
   	  f(u->vertices[i]);
   }
