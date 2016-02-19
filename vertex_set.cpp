@@ -16,12 +16,10 @@
  */
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
-  // TODO: Implement
 	VertexSet* vs = new VertexSet();
 	vs->size = 0;
   vs->capacity = capacity;
   vs->vertices = new Vertex[capacity];
-  // std::vector<Vertex> vs->vertices(capacity);
   vs->numNodes = numNodes;
   vs->type = type;
   return vs;
@@ -31,12 +29,10 @@ void freeVertexSet(VertexSet *set)
 {
   delete set->vertices;
   delete set;
-  // TODO: Implement
 }
 
 void addVertex(VertexSet *set, Vertex v)
 {
-  // set->size++;
   for (int i = 0; i < set->size; ++i)
   {
     if (set->vertices[i]==v)
@@ -44,9 +40,8 @@ void addVertex(VertexSet *set, Vertex v)
       return;
     }
   }
-  ENSURES(set->size<= set->size);
+  ENSURES(set->size <= set->capacity);
   set->vertices[set->size++]=v;
-  // TODO: Implement
 }
 
 void removeVertex(VertexSet *set, Vertex v)
@@ -65,7 +60,6 @@ void removeVertex(VertexSet *set, Vertex v)
     set->vertices[i]=set->vertices[i+1];
   }
   set->size--;
-  // TODO: Implement
 
 }
 
