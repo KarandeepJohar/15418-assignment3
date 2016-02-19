@@ -19,7 +19,7 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
   VertexSet* vs = new VertexSet;
   vs->size = 0;
   vs->capacity = capacity;
-  // vs->vertices.reserve(capacity);
+  vs->vertices.reserve(capacity);
   vs->numNodes = numNodes;
   vs->type = type;
   // printf("capacity%d\n",capacity);
