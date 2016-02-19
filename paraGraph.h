@@ -37,7 +37,6 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
     bool removeDuplicates=true)
 {
   VertexSet *trueResult = newVertexSet(SPARSE, u->numNodes, u->numNodes);
-  #pragma omp parallel for
   for (int i=0; i<u->size; i++) {
     const Vertex* start = outgoing_begin(g, u->vertices[i]);
     const Vertex* end = outgoing_end(g, u->vertices[i]);
@@ -45,7 +44,6 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 
       if (f.cond(*v) && f.update(u->vertices[i], *v))
       {	
-      	#pragma omp critical	
         addVertex(trueResult, *v);
     	}
     }
@@ -80,18 +78,16 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
   if (returnSet) {
     VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
     bool result;
-    #pragma omp parallel for
     for (int i=0; i< u->size; i++) {
       result = f(u->vertices[i]);
       if(result) {
         addVertex(trueResult, u->vertices[i]);
       }
     }
-    printf("size %d\n",trueResult->size );
+    // printf("size %d\n",trueResult->size );
     return trueResult;
   }
   else{
-  	#pragma omp parallel for
   	for (int i=0; i< u->size; i++) 
   	  f(u->vertices[i]);
   }
