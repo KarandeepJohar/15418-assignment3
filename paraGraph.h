@@ -7,7 +7,7 @@
 #include <iostream>
 #include "vertex_set.h"
 #include "graph.h"
-
+#include <set>
 #include "mic.h"
 
 /*
@@ -37,22 +37,44 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
     bool removeDuplicates=true)
 {
   VertexSet *trueResult = newVertexSet(SPARSE, u->numNodes, u->numNodes);
-  # pragma omp parallel for
-  for (int i=0; i<u->size; i++) {
-  	Vertex vertex=u->vertices[i];
-    const Vertex* start = outgoing_begin(g, vertex);
-    const Vertex* end = outgoing_end(g, vertex);
-    //# pragma omp parallel for
-    for(const Vertex* v=start; v!=end; v++) {
-
-      if (f.cond(*v) && f.update(vertex, *v))
-      {	
-      	#pragma omp critical
-        addVertex(trueResult, *v);
-    	}
+  //if (removeDuplicates) {
+  //    # pragma omp parallel for
+  //    for (int i=0; i<u->size; i++) {
+  //    Vertex vertex=u->vertices[i];
+  //    const Vertex* start = outgoing_begin(g, vertex);
+  //    const Vertex* end = outgoing_end(g, vertex);
+  //    for(const Vertex* v=start; v!=end; v++) {                
+  //      if (f.cond(*v) && f.update(vertex, *v)) { 
+  //          #pragma omp critical
+  //          addVertex(trueResult, *v);
+  //      }
+  //    }
+  //  }
+  //} else {
+  #pragma omp parallel
+  {
+    std::vector<int> vec_private;
+    # pragma omp parallel for
+    for (int i=0; i<u->size; i++) {
+  	  Vertex vertex=u->vertices[i];
+      const Vertex* start = outgoing_begin(g, vertex);
+      const Vertex* end = outgoing_end(g, vertex);
+      for(const Vertex* v=start; v!=end; v++) {
+        if (f.cond(*v) && f.update(vertex, *v))
+        { 	
+          vec_private.push_back(*v);
+    	  }
+      }
     }
+    #pragma omp critical
+    trueResult->vertices.insert(trueResult->vertices.end(), vec_private.begin(), vec_private.end());  
   }
-
+  if(removeDuplicates) {
+    std::set<int> s(trueResult->vertices.begin(), trueResult->vertices.end());
+    trueResult->vertices.assign( s.begin(), s.end());
+  }
+  trueResult->size = trueResult->vertices.size();
+  //}
   return trueResult;
 }
 
@@ -82,7 +104,7 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
     //std::cout << "Size of result" << u->size;
     VertexSet *trueResult = newVertexSet(SPARSE, u->size, u->numNodes);
     //#pragma omp declare reduction (merge : std::vector<int> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
-    std::vector<int> vec;
+    //std::vector<int> vec;
     #pragma omp parallel
     {
        std::vector<int> vec_private;
@@ -94,9 +116,9 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
           }  
        }
        #pragma omp critical
-       vec.insert(vec.end(), vec_private.begin(), vec_private.end());  
+       trueResult->vertices.insert(trueResult->vertices.end(), vec_private.begin(), vec_private.end());  
     }
-    trueResult->vertices.insert(trueResult->vertices.end(), vec.begin(), vec.end());
+    //trueResult->vertices.insert(trueResult->vertices.end(), vec.begin(), vec.end());
     trueResult->size = trueResult->vertices.size();
     return trueResult;
   }
