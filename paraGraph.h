@@ -79,31 +79,29 @@ template <class F>
 static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
 {
   if (returnSet) {
-    Vertex cap[u->size];
-    # pragma omp parallel for
-    for (int i=0; i< u->size; i++) {
-      Vertex vertex = u->vertices[i];
-      if(f(vertex)) {
-      	//#pragma omp critical
-        //Always a subset, can initiate array and use reduction
-        //addVertex(trueResult, vertex);
-        cap[i] = 1;
-      } else {
-        cap[i] = 0;
-      }
-    }
+    //std::cout << "Size of result" << u->size;
     VertexSet *trueResult = newVertexSet(SPARSE, u->size, u->numNodes);
-    for (int i = 0; i< u->size; i++) {
-      if (cap[i] == 1) {
-        //addVertex(trueResult, u->vertices[i]);
-        trueResult->vertices.push_back(u->vertices[i]);
-        trueResult->size = trueResult->vertices.size();
-      }
+    //#pragma omp declare reduction (merge : std::vector<int> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
+    std::vector<int> vec;
+    #pragma omp parallel
+    {
+       std::vector<int> vec_private;
+       #pragma omp for nowait //fill vec_private in parallel
+       for (int i=0; i< u->size; i++) {
+          Vertex vertex = u->vertices[i];
+          if(f(vertex)) {
+            vec_private.push_back(vertex);
+          }  
+       }
+       #pragma omp critical
+       vec.insert(vec.end(), vec_private.begin(), vec_private.end());  
     }
+    trueResult->vertices.insert(trueResult->vertices.end(), vec.begin(), vec.end());
+    trueResult->size = trueResult->vertices.size();
     return trueResult;
   }
   else{
-  	# pragma omp parallel for
+  	//# pragma omp parallel for
   	for (int i=0; i< u->size; i++) 
   	  f(u->vertices[i]);
   }
