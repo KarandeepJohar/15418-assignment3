@@ -36,13 +36,13 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
     bool removeDuplicates=true)
 {
-  VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
+  VertexSet *trueResult = newVertexSet(SPARSE, u->numNodes, u->numNodes);
   # pragma omp parallel for
   for (int i=0; i<u->size; i++) {
   	Vertex vertex=u->vertices[i];
     const Vertex* start = outgoing_begin(g, vertex);
     const Vertex* end = outgoing_end(g, vertex);
-    // # pragma omp parallel for
+    //# pragma omp parallel for
     for(const Vertex* v=start; v!=end; v++) {
 
       if (f.cond(*v) && f.update(vertex, *v))
@@ -79,13 +79,25 @@ template <class F>
 static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
 {
   if (returnSet) {
-    VertexSet *trueResult = newVertexSet(SPARSE, u->capacity, u->numNodes);
+    Vertex cap[u->size];
     # pragma omp parallel for
     for (int i=0; i< u->size; i++) {
       Vertex vertex = u->vertices[i];
       if(f(vertex)) {
-      	#pragma omp critical
-        addVertex(trueResult, vertex);
+      	//#pragma omp critical
+        //Always a subset, can initiate array and use reduction
+        //addVertex(trueResult, vertex);
+        cap[i] = 1;
+      } else {
+        cap[i] = 0;
+      }
+    }
+    VertexSet *trueResult = newVertexSet(SPARSE, u->size, u->numNodes);
+    for (int i = 0; i< u->size; i++) {
+      if (cap[i] == 1) {
+        //addVertex(trueResult, u->vertices[i]);
+        trueResult->vertices.push_back(u->vertices[i]);
+        trueResult->size = trueResult->vertices.size();
       }
     }
     return trueResult;
