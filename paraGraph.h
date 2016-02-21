@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <iostream>
 #include "vertex_set.h"
@@ -10,6 +11,7 @@
 #include <set>
 #include "mic.h"
 #include "graph_internal.h"
+
 /*
  * edgeMap --
  *
@@ -122,9 +124,6 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 					{
 						newDenseVertices[*neigh] = true;
 					}
-					else {
-						newDenseVertices[*neigh] = false;
-					}
 				}
 
 			}
@@ -190,7 +189,6 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 		return newVertexSet(DENSE, sum, u->numNodes, newDenseVertices);
 	}
 	else {
-
 		if (u->type == SPARSE)
 		{
 			# pragma omp parallel for
