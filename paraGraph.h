@@ -9,87 +9,150 @@
 #include "graph.h"
 #include <set>
 #include "mic.h"
-
+#include "graph_internal.h"
 /*
  * edgeMap --
- * 
+ *
  * Students will implement this function.
- * 
+ *
  * The input argument f is a class with the following methods defined:
  *   bool update(Vertex src, Vertex dst)
  *   bool cond(Vertex v)
  *
  * See apps/bfs.cpp for an example of such a class definition.
- * 
+ *
  * When the argument removeDuplicates is false, the implementation of
  * edgeMap need not remove duplicate vertices from the VertexSet it
  * creates when iterating over edges.  This is a performance
  * optimization when the application knows (and can tell ParaGraph)
  * that f.update() guarantees that duplicate vertices cannot appear in
  * the output vertex set.
- * 
+ *
  * Further notes: the implementation of edgeMap is templated on the
  * type of this object, which allows for higher performance code
  * generation as these methods will be inlined.
  */
 template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
-    bool removeDuplicates=true)
+                          bool removeDuplicates = true)
 {
-  VertexSet *trueResult = newVertexSet(SPARSE, u->numNodes, u->numNodes);
-  //if (removeDuplicates) {
-  //    # pragma omp parallel for
-  //    for (int i=0; i<u->size; i++) {
-  //    Vertex vertex=u->vertices[i];
-  //    const Vertex* start = outgoing_begin(g, vertex);
-  //    const Vertex* end = outgoing_end(g, vertex);
-  //    for(const Vertex* v=start; v!=end; v++) {                
-  //      if (f.cond(*v) && f.update(vertex, *v)) { 
-  //          #pragma omp critical
-  //          addVertex(trueResult, *v);
-  //      }
-  //    }
-  //  }
-  //} else {
-  #pragma omp parallel
-  {
-    std::vector<int> vec_private;
-    # pragma omp parallel for
-    for (int i=0; i<u->size; i++) {
-  	  Vertex vertex=u->vertices[i];
-      const Vertex* start = outgoing_begin(g, vertex);
-      const Vertex* end = outgoing_end(g, vertex);
-      for(const Vertex* v=start; v!=end; v++) {
-        if (f.cond(*v) && f.update(vertex, *v))
-        { 	
-          vec_private.push_back(*v);
-    	  }
-      }
-    }
-    #pragma omp critical
-    trueResult->vertices.insert(trueResult->vertices.end(), vec_private.begin(), vec_private.end());  
-  }
-  if(removeDuplicates) {
-    std::set<int> s(trueResult->vertices.begin(), trueResult->vertices.end());
-    trueResult->vertices.assign( s.begin(), s.end());
-  }
-  trueResult->size = trueResult->vertices.size();
-  //}
-  return trueResult;
+	int* degrees = new int[u->size];
+	if (u->type == SPARSE)
+	{
+		int sum_degrees = 0;
+		#pragma omp parallel for reduction(+:sum_degrees)
+		for (int i = 0; i < u->size; ++i)
+		{
+			Vertex v = u->vertices[i];
+			degrees[i] = outgoing_size(g, v);
+			sum_degrees += degrees[i];
+		}
+		// VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes);
+		int* finalNeighbours = new int[sum_degrees];
+		int* offsets = new int[u->size];
+
+		// parallel_scan(offsets, degrees);
+
+
+		#pragma omp parallel for
+		for (int i = 0; i < u->size; ++i)
+		{
+			Vertex v = u->vertices[i];
+			int offset = offsets[i];
+			const Vertex* start = outgoing_begin(g, v);
+			const Vertex* end = outgoing_end(g, v);
+			int j = 0;
+			for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
+				if (f.cond(*neigh) && f.update(v, *neigh))
+				{
+					finalNeighbours[offset + j] = *neigh;
+				}
+				else {
+					finalNeighbours[offset + j] = -1;
+				}
+			}
+		}
+
+		if (removeDuplicates) {
+			//removeduplicates
+			remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
+		}
+
+		Vertex* newSparseVertices = new Vertex[sum_degrees];
+
+
+		// filter(newSparseVertices, finalNeighbours, sum_degrees, nonNegative());
+		bool* tempBoolArray = new bool[sum_degrees];
+		#pragma omp parallel for
+		for (int i = 0; i < sum_degrees; ++i)
+		{
+			if (finalNeighbours[i] >= 0)
+			{
+				tempBoolArray[i] = true;
+			} else {
+				tempBoolArray[i] = false;
+			}
+		}
+		packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
+		VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices);
+		delete[] tempBoolArray;
+		delete[] degrees;
+		delete[] offsets;
+		delete[] finalNeighbours;
+		return trueResult;
+	}
+	else {
+		bool* newDenseVertices = new bool[u->numNodes];
+		#pragma omp parallel for
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			newDenseVertices[i] = false;
+		}
+		#pragma omp parallel for
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			if (u->denseVertices[i])
+			{
+				Vertex v = i;
+				const Vertex* start = outgoing_begin(g, v);
+				const Vertex* end = outgoing_end(g, v);
+				int j = 0;
+				for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
+					if (f.cond(*neigh) && f.update(v, *neigh))
+					{
+						newDenseVertices[*neigh] = true;
+					}
+					else {
+						newDenseVertices[*neigh] = false;
+					}
+				}
+
+			}
+		}
+		int sum = 0;
+		#pragma omp parallel for reduction(+:sum)
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			sum += newDenseVertices[i];
+		}
+		return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
+
+
+	}
 }
 
 
 
 /*
- * vertexMap -- 
- * 
+ * vertexMap --
+ *
  * Students will implement this function.
  *
  * The input argument f is a class with the following methods defined:
  *   bool operator()(Vertex v)
  *
  * See apps/kBFS.cpp for an example implementation.
- * 
+ *
  * Note that you'll call the function on a vertex as follows:
  *    Vertex v;
  *    bool result = f(v)
@@ -98,36 +161,55 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
  * return NULL (it need not build and create a vertex set)
  */
 template <class F>
-static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet=true)
+static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 {
-  if (returnSet) {
-    //std::cout << "Size of result" << u->size;
-    VertexSet *trueResult = newVertexSet(SPARSE, u->size, u->numNodes);
-    //#pragma omp declare reduction (merge : std::vector<int> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
-    //std::vector<int> vec;
-    #pragma omp parallel
-    {
-       std::vector<int> vec_private;
-       #pragma omp for nowait //fill vec_private in parallel
-       for (int i=0; i< u->size; i++) {
-          Vertex vertex = u->vertices[i];
-          if(f(vertex)) {
-            vec_private.push_back(vertex);
-          }  
-       }
-       #pragma omp critical
-       trueResult->vertices.insert(trueResult->vertices.end(), vec_private.begin(), vec_private.end());  
-    }
-    //trueResult->vertices.insert(trueResult->vertices.end(), vec.begin(), vec.end());
-    trueResult->size = trueResult->vertices.size();
-    return trueResult;
-  }
-  else{
-  	//# pragma omp parallel for
-  	for (int i=0; i< u->size; i++) 
-  	  f(u->vertices[i]);
-  }
-  return NULL;
+
+	if (returnSet) {
+		//std::cout << "Size of result" << u->size;
+		updateDense(u, true);
+		bool* newDenseVertices = new bool[u->numNodes];
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			newDenseVertices[i] = false;
+		}
+
+		#pragma omp parallel for
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			if (u->denseVertices[i])
+			{
+				newDenseVertices[i] = f(i);
+			}
+		}
+		int sum = 0;
+		#pragma omp parallel for reduction(+:sum)
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			sum += newDenseVertices[i];
+		}
+		return newVertexSet(DENSE, sum, u->numNodes, newDenseVertices);
+	}
+	else {
+
+		if (u->type == SPARSE)
+		{
+			# pragma omp parallel for
+			for (int i = 0; i < u->size; i++)
+				f(u->vertices[i]);
+		}
+		else {
+			# pragma omp parallel for
+			for (int i = 0; i < u->numNodes; ++i)
+			{
+				if (u->denseVertices[i])
+				{
+					f(i);
+				}
+			}
+		}
+
+	}
+	return NULL;
 }
 
 #endif /* __PARAGRAPH_H__ */

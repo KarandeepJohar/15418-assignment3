@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "contracts.h"
+#include "graph.h"
 
 struct graph
 {
