@@ -249,9 +249,10 @@ int main(int argc, char** argv)
   if (arguments.app == DECOMP || arguments.app == GRADE) {
     /* GraphDecomposition */
     timingApp(timing, "Graph Decomposition");
-    possiblePoints += 5;
+    // 5 total performance points for graph decomp, split between 4 graphs.
+    possiblePoints += 5.0/4;
     points += TIME_MIC(graphDecompRefWrapper, graphDecompWrapper, int)
-      (timing, arguments.device, numTrials, 5, min_threads, max_threads,
+      (timing, arguments.device, numTrials, 5.0/4, min_threads, max_threads,
       compareArraysAndDisplay<int>, graph);
   }
 
