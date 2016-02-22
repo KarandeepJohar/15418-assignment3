@@ -226,7 +226,7 @@ int main(int argc, char** argv)
     /* BFS */
     timingApp(timing, "BFS");
     possiblePoints += 4.5;
-    points += TIME_MIC(bfs_ref, bfs, int)
+    points += TIME_MIC(bfs_ref, bfs, int, 1)
       (timing, arguments.device, numTrials, 4.5, min_threads, max_threads,
       compareArrays<int>, graph);
   }
@@ -234,7 +234,7 @@ int main(int argc, char** argv)
     /* PageRank */
     timingApp(timing, "PageRank");
     possiblePoints += 4.5;
-    points += TIME_MIC(pageRankRefWrapper, pageRankWrapper, float)
+    points += TIME_MIC(pageRankRefWrapper, pageRankWrapper, float, 2)
       (timing, arguments.device, numTrials, 4.5, min_threads, max_threads,
       compareApprox<float>, graph);
   }
@@ -242,7 +242,7 @@ int main(int argc, char** argv)
     /* kBFS */
     timingApp(timing, "kBFS");
     possiblePoints += 4.5;
-    points += TIME_MIC(kBFS_ref, kBFS, int)
+    points += TIME_MIC(kBFS_ref, kBFS, int, 3)
       (timing, arguments.device, numTrials, 4.5, min_threads, max_threads,
       compareArraysAndRadiiEst<int>, graph);
   }
@@ -251,7 +251,7 @@ int main(int argc, char** argv)
     timingApp(timing, "Graph Decomposition");
     // 5 total performance points for graph decomp, split between 4 graphs.
     possiblePoints += 5.0/4;
-    points += TIME_MIC(graphDecompRefWrapper, graphDecompWrapper, int)
+    points += TIME_MIC(graphDecompRefWrapper, graphDecompWrapper, int, 4)
       (timing, arguments.device, numTrials, 5.0/4, min_threads, max_threads,
       compareArraysAndDisplay<int>, graph);
   }

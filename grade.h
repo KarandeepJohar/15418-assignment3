@@ -51,7 +51,9 @@ mic_wrapper( int num_nodes, int *outgoing_starts
 
 
 // template<typename Fn, Fn ref, Fn stu, typename T, typename... Args>
-template<typename Fn, Fn ref, Fn stu, typename T>
+// The APP parameter ensures that each app gets a unique timeMIC function to
+// avoid linking problem.
+template<typename Fn, Fn ref, Fn stu, typename T, int APP>
 double timeMic
   ( std::stringstream& timing
   , int device
@@ -263,10 +265,10 @@ double timeMic
 }
 
 #ifdef RUN_MIC
-  #define TIME_MIC(REF, STU, T) \
-    timeMic<decltype(&(MIC_WRAPPER(REF, T))), &(MIC_WRAPPER(REF, T)), &(MIC_WRAPPER(STU, T)), T>
+  #define TIME_MIC(REF, STU, T, n) \
+    timeMic<decltype(&(MIC_WRAPPER(REF, T))), &(MIC_WRAPPER(REF, T)), &(MIC_WRAPPER(STU, T)), T, (n)>
 #else
-  #define TIME_MIC(REF, STU, T) timeMic<decltype(&REF), &REF, &STU, T>
+  #define TIME_MIC(REF, STU, T, n) timeMic<decltype(&REF), &REF, &STU, T, (n)>
 #endif
 
 #endif
