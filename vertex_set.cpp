@@ -198,16 +198,16 @@ int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
     delete[] sums;
     return sum;
 }
-
 void remDuplicates(Vertex* input, int size, int numNodes) {
     
 
     Vertex* flags = new Vertex[numNodes];
     #pragma omp parallel for
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < numNodes; ++i)
     {
         flags[i] = -1;
     }
+    #pragma omp parallel for
     for (int i = 0; i < size; ++i)
     {
         if (input[i] != -1 && flags[input[i]] == -1)
