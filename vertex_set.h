@@ -21,7 +21,7 @@ typedef struct {
 
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes);
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* denseVertices);
-VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* vertices);
+VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* vertices, int size);
 int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n);
 
 void remDuplicates(Vertex* input, int size, int numNodes);

@@ -39,7 +39,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
                           bool removeDuplicates = true)
 {
 	int* degrees = new int[u->size];
-	printf("edgemap called %d\n",u->size );
+	// printf("edgemap called %d\n",u->size );
 	updateSparse(u, true);
 	if (u->type == SPARSE)
 	{	
@@ -49,7 +49,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		for (int i = 0; i < u->size; ++i)
 		{
 			Vertex v = u->vertices[i];
-
+			// printf("%d %d\n",i, v );
 			degrees[i] = outgoing_size(g, v);
 			sum_degrees += degrees[i];
 		}
@@ -57,11 +57,6 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		int* offsets = new int[u->size];
 
 		prefix_sum(offsets, degrees, u->size);
-		// printf("offsets\n");
-		// for (int i = 0; i < u->size; ++i)
-		// {
-		// 	printf("%d\n", offsets[i]);
-		// }
 
 
 
@@ -105,7 +100,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		}
 		// printf("99\n");
 		int new_sum = packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
-		VertexSet *trueResult = newVertexSet(SPARSE, new_sum, u->numNodes, newSparseVertices);
+		VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices, new_sum);
 		delete[] tempBoolArray;
 		delete[] degrees;
 		delete[] offsets;
