@@ -4,6 +4,7 @@
 #include <string.h>
 #include <cassert>
 #include <stdio.h>
+#include <omp.h>
 #include "mic.h"
 #include <algorithm>
 /**
@@ -14,50 +15,170 @@
  * use different representations of VertexSets under different
  * conditions, and they different conditions can be indicated by 'type'
  */
+bool ispowerof2( int x) {
+     return x && !(x & (x - 1));
+}
+
+unsigned long upper_power_of_two(unsigned long v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
+
 void prefix_sum(Vertex* output, bool* boolArray, int N) {
-    memcpy(output, boolArray, N * sizeof(int));
-    // upsweep phase.
-    for (int twod = 1; twod < N; twod *= 2) {
-        int twod1 = twod * 2;
-        #pragma omp parallel for
-        for (int i = 0; i < N; i += twod1) {
-            output[i + twod1 - 1] += output[i + twod - 1];
-        }
+    #pragma omp parallel for
+    for (int i = 0; i < N; i++) {
+      if (boolArray[i]) {
+        output[i] = 1;
+      } else {
+        output[i] = 0;
+      }
     }
-    output[N - 1] = 0;
-    // downsweep phase.
-    for (int twod = N / 2; twod >= 1; twod /= 2) {
-        int twod1 = twod * 2;
-        #pragma omp parallel for
-        for (int i = 0; i < N; i += twod1) {
-            int t = output[i + twod - 1];
-            output[i + twod - 1] = output[i + twod1 - 1];
-            output[i + twod1 - 1] += t;
+    if (ispowerof2(N)) {
+        // upsweep phase.
+        for (int twod = 1; twod < N; twod *= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < N; i += twod1) {
+                output[i + twod1 - 1] += output[i + twod - 1];
+            }
         }
+        output[N - 1] = 0;
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Upsweep: %d\n",output[i]);
+        }
+        // downsweep phase.
+        for (int twod = N / 2; twod >= 1; twod /= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < N; i += twod1) {
+                int t = output[i + twod - 1];
+                output[i + twod - 1] = output[i + twod1 - 1];
+                output[i + twod1 - 1] += t;
+            }
+        }
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Sum: %d\n",output[i]);
+        }
+    } else {
+        printf("Going up\n");
+        int powN = upper_power_of_two(N);
+        //Vertex* opN = (Vertex *)calloc(powN*sizeof(int),0);
+        Vertex* opN = new Vertex[powN]();
+        memcpy(opN, output, N*sizeof(int));
+        // upsweep phase.
+        for (int twod = 1; twod < powN; twod *= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < powN; i += twod1) {
+                opN[i + twod1 - 1] += opN[i + twod - 1];
+            }
+        }
+        opN[powN - 1] = 0;
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Upsweep: %d\n",opN[i]);
+        }
+        // downsweep phase.
+        for (int twod = powN / 2; twod >= 1; twod /= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < powN; i += twod1) {
+                int t = opN[i + twod - 1];
+                opN[i + twod - 1] = opN[i + twod1 - 1];
+                opN[i + twod1 - 1] += t;
+            }
+        }
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Sum: %d\n",opN[i]);
+        }
+
+        memcpy(output, opN, N*sizeof(int));
+        //free(opN);
+        delete[] opN;
     }
+
 }
 
 void prefix_sum(Vertex* output, int* boolArray, int N) {
-    memcpy(output, boolArray, N * sizeof(int));
-    // upsweep phase.
-    for (int twod = 1; twod < N; twod *= 2) {
-        int twod1 = twod * 2;
-        #pragma omp parallel for
-        for (int i = 0; i < N; i += twod1) {
-            output[i + twod1 - 1] += output[i + twod - 1];
+    memcpy(output, boolArray, N*sizeof(int));
+    if (ispowerof2(N)) {
+        // upsweep phase.
+        for (int twod = 1; twod < N; twod *= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < N; i += twod1) {
+                output[i + twod1 - 1] += output[i + twod - 1];
+            }
         }
-    }
-    output[N - 1] = 0;
-    // downsweep phase.
-    for (int twod = N / 2; twod >= 1; twod /= 2) {
-        int twod1 = twod * 2;
-        #pragma omp parallel for
-        for (int i = 0; i < N; i += twod1) {
-            int t = output[i + twod - 1];
-            output[i + twod - 1] = output[i + twod1 - 1];
-            output[i + twod1 - 1] += t;
+        output[N - 1] = 0;
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Upsweep: %d\n",output[i]);
         }
+        // downsweep phase.
+        for (int twod = N / 2; twod >= 1; twod /= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < N; i += twod1) {
+                int t = output[i + twod - 1];
+                output[i + twod - 1] = output[i + twod1 - 1];
+                output[i + twod1 - 1] += t;
+            }
+        }
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Sum: %d\n",output[i]);
+        }
+    } else {
+        printf("Going up\n");
+        int powN = upper_power_of_two(N);
+        //Vertex* opN = (Vertex *)calloc(powN*sizeof(int),0);
+        Vertex* opN = new Vertex[powN]();
+        memcpy(opN, output, N*sizeof(int));
+        // upsweep phase.
+        for (int twod = 1; twod < powN; twod *= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < powN; i += twod1) {
+                opN[i + twod1 - 1] += opN[i + twod - 1];
+            }
+        }
+        opN[powN - 1] = 0;
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Upsweep: %d\n",opN[i]);
+        }
+        // downsweep phase.
+        for (int twod = powN / 2; twod >= 1; twod /= 2) {
+            int twod1 = twod * 2;
+            //#pragma omp parallel for
+            for (int i = 0; i < powN; i += twod1) {
+                int t = opN[i + twod - 1];
+                opN[i + twod - 1] = opN[i + twod1 - 1];
+                opN[i + twod1 - 1] += t;
+            }
+        }
+        for (int i = 0; i<N; i++) {
+            printf("Bool: %d ",boolArray[i]);
+            printf("Sum: %d\n",opN[i]);
+        }
+
+        memcpy(output, opN, N*sizeof(int));
+        //free(opN);
+        delete[] opN;
     }
+
 }
 
 void packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
@@ -186,6 +307,7 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
             sparse[sums[i]] =i;
         }
     }
+    delete[] sums;
 }
 
 
