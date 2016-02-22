@@ -33,6 +33,6 @@ void removeVertex(VertexSet *set, Vertex v);
 
 VertexSet*  vertexUnion(VertexSet *u, VertexSet* v);
 void updateDense(VertexSet *set, bool convert);
-
+void prefix_sum(Vertex* output, int* boolArray, int N);
 void updateSparse(VertexSet *set, bool convert );
 #endif // __VERTEX_SET__

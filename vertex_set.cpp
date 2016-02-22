@@ -15,31 +15,54 @@
  * conditions, and they different conditions can be indicated by 'type'
  */
 void prefix_sum(Vertex* output, bool* boolArray, int N) {
-    memcpy(output, boolArray, N*sizeof(int));
+    memcpy(output, boolArray, N * sizeof(int));
     // upsweep phase.
-    for (int twod = 1; twod < N; twod*=2) {
-       int twod1 = twod*2;
-#pragma omp parallel for
-       for (int i = 0; i < N; i += twod1) {
-          output[i+twod1-1] += output[i+twod-1];
-       }
+    for (int twod = 1; twod < N; twod *= 2) {
+        int twod1 = twod * 2;
+        #pragma omp parallel for
+        for (int i = 0; i < N; i += twod1) {
+            output[i + twod1 - 1] += output[i + twod - 1];
+        }
     }
-    output[N-1] = 0;
-   // downsweep phase.
-   for (int twod = N/2; twod >= 1; twod /= 2) {
-      int twod1 = twod*2;
-#pragma omp parallel for
-      for (int i = 0; i < N; i += twod1) {
-        int t = output[i+twod-1];
-        output[i+twod-1] = output[i+twod1-1];
-        output[i+twod1-1] += t; 
-      }
-   }
+    output[N - 1] = 0;
+    // downsweep phase.
+    for (int twod = N / 2; twod >= 1; twod /= 2) {
+        int twod1 = twod * 2;
+        #pragma omp parallel for
+        for (int i = 0; i < N; i += twod1) {
+            int t = output[i + twod - 1];
+            output[i + twod - 1] = output[i + twod1 - 1];
+            output[i + twod1 - 1] += t;
+        }
+    }
+}
+
+void prefix_sum(Vertex* output, int* boolArray, int N) {
+    memcpy(output, boolArray, N * sizeof(int));
+    // upsweep phase.
+    for (int twod = 1; twod < N; twod *= 2) {
+        int twod1 = twod * 2;
+        #pragma omp parallel for
+        for (int i = 0; i < N; i += twod1) {
+            output[i + twod1 - 1] += output[i + twod - 1];
+        }
+    }
+    output[N - 1] = 0;
+    // downsweep phase.
+    for (int twod = N / 2; twod >= 1; twod /= 2) {
+        int twod1 = twod * 2;
+        #pragma omp parallel for
+        for (int i = 0; i < N; i += twod1) {
+            int t = output[i + twod - 1];
+            output[i + twod - 1] = output[i + twod1 - 1];
+            output[i + twod1 - 1] += t;
+        }
+    }
 }
 
 void packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
     Vertex* sums = new Vertex[n];
-    // prefix_sum(sums, boolArray, n);
+    prefix_sum(sums, boolArray, n);
     for (int i = 0; i < n; ++i)
     {
         if (boolArray[i])
@@ -138,7 +161,7 @@ void freeVertexSet(VertexSet *set)
 }
 
 void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes) {
-    
+
     // #pragma omp parallel for
     for (int i = 0; i < numNodes; ++i)
     {
@@ -153,11 +176,15 @@ void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes
 
 void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
 
+    Vertex* sums = new Vertex[numNodes];
+    prefix_sum(sums, dense, numNodes);
     #pragma omp parallel for
     for (int i = 0; i < numNodes; ++i)
     {
-        /* code */
-        //WRITE THE CODE HERE
+        if (dense[i])
+        {
+            sparse[sums[i]] =i;
+        }
     }
 }
 
@@ -198,7 +225,7 @@ void addVertex(VertexSet *set, Vertex v)
 
     updateDense(set, true);
     if (set->type == DENSE)
-    {   
+    {
         if (set->denseVertices[v] == false)
         {
             set->size++;
