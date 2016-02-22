@@ -257,6 +257,7 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* de
     VertexSet* vs = new VertexSet;
     vs->numNodes = numNodes;
     vs->size = capacity;
+    vs->capacity = capacity;
     vs->numNodes = numNodes;
     vs->type = DENSE;
     vs->denseUpToDate = true;
@@ -266,10 +267,11 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* de
     return vs;
 }
 
-VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* vertices) {
+VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* vertices, int size) {
     VertexSet* vs = new VertexSet;
     vs->numNodes = numNodes;
-    vs->size = capacity;
+    vs->size = size;
+    vs->capacity = capacity;
     vs->numNodes = numNodes;
     vs->type = SPARSE;
     vs->denseUpToDate = false;
@@ -351,7 +353,7 @@ void updateSparse(VertexSet *set, bool convert = false ) {
 void addVertex(VertexSet *set, Vertex v)
 {   //this will convert it into dense
 
-
+    // printf("addVertex\n");
     updateDense(set, true);
     if (set->type == DENSE)
     {
