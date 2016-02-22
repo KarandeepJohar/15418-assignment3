@@ -55,7 +55,6 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 
 		// parallel_scan(offsets, degrees);
 
-
 		#pragma omp parallel for
 		for (int i = 0; i < u->size; ++i)
 		{
@@ -76,14 +75,11 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		}
 
 		if (removeDuplicates) {
-			//removeduplicates
 			remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
 		}
 
 		Vertex* newSparseVertices = new Vertex[sum_degrees];
 
-
-		// filter(newSparseVertices, finalNeighbours, sum_degrees, nonNegative());
 		bool* tempBoolArray = new bool[sum_degrees];
 		#pragma omp parallel for
 		for (int i = 0; i < sum_degrees; ++i)
@@ -167,10 +163,10 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 		//std::cout << "Size of result" << u->size;
 		updateDense(u, true);
 		bool* newDenseVertices = new bool[u->numNodes];
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			newDenseVertices[i] = false;
-		}
+		//for (int i = 0; i < u->numNodes; ++i)
+		//{
+		//	newDenseVertices[i] = false;
+		//}
 
 		#pragma omp parallel for
 		for (int i = 0; i < u->numNodes; ++i)
@@ -178,7 +174,9 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 			if (u->denseVertices[i])
 			{
 				newDenseVertices[i] = f(i);
-			}
+			} else {
+				newDenseVertices[i] = false;
+      }
 		}
 		int sum = 0;
 		#pragma omp parallel for reduction(+:sum)
