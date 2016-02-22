@@ -14,12 +14,32 @@
  * use different representations of VertexSets under different
  * conditions, and they different conditions can be indicated by 'type'
  */
-
+void prefix_sum(Vertex* output, bool* boolArray, int N) {
+    memcpy(output, boolArray, N*sizeof(int));
+    // upsweep phase.
+    for (int twod = 1; twod < N; twod*=2) {
+       int twod1 = twod*2;
+#pragma omp parallel for
+       for (int i = 0; i < N; i += twod1) {
+          output[i+twod1-1] += output[i+twod-1];
+       }
+    }
+    output[N-1] = 0;
+   // downsweep phase.
+   for (int twod = N/2; twod >= 1; twod /= 2) {
+      int twod1 = twod*2;
+#pragma omp parallel for
+      for (int i = 0; i < N; i += twod1) {
+        int t = output[i+twod-1];
+        output[i+twod-1] = output[i+twod1-1];
+        output[i+twod1-1] += t; 
+      }
+   }
+}
 
 void packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
-    Vertex* scratch = new Vertex[n];
     Vertex* sums = new Vertex[n];
-    // prefix_sum(sums, boolArray, scratch, n);
+    // prefix_sum(sums, boolArray, n);
     for (int i = 0; i < n; ++i)
     {
         if (boolArray[i])
@@ -28,7 +48,6 @@ void packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
         }
     }
     delete[] sums;
-    delete[] scratch;
 }
 
 void remDuplicates(Vertex* input, int size, int numNodes) {
@@ -62,7 +81,6 @@ void remDuplicates(Vertex* input, int size, int numNodes) {
 }
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
-    // printf("newVertexSet\n");
     VertexSet* vs = new VertexSet;
     vs->numNodes = numNodes;
     vs->size = 0;
@@ -81,7 +99,6 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
         vs->vertices = NULL;
         vs->denseUpToDate = true;
     }
-    // printf("capacity%d\n",capacity);
     return vs;
 }
 
@@ -127,13 +144,11 @@ void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes
     {
         dense[i] = false;
     }
-    // printf("135\n");
     #pragma omp parallel for
     for (int i = 0; i < size ; ++i)
     {
         dense[sparse[i]] = true;
     }
-    // printf("dense0 %d\n", *dense[0]);
 }
 
 void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
@@ -156,12 +171,10 @@ void updateDense(VertexSet *set, bool convert = false) {
     if (!(set->denseUpToDate))
         parallel_update_dense(set->denseVertices, set->vertices, set->size, set->numNodes);
     // set->denseVertices[0];
-    // printf("dense0 %d\n", set->denseVertices[0]);
 
     if (convert)
         set->type = DENSE;
     set->denseUpToDate = true;
-    // printf("return updateDense\n");
 }
 
 void updateSparse(VertexSet *set, bool convert = false ) {
@@ -183,14 +196,11 @@ void addVertex(VertexSet *set, Vertex v)
 {   //this will convert it into dense
 
 
-    // printf("addVertex\n");
     updateDense(set, true);
     if (set->type == DENSE)
     {   
-        // printf("182\n");
         if (set->denseVertices[v] == false)
         {
-            // printf("185\n");
             set->size++;
             ENSURES(set->size <= set->capacity);
             set->denseVertices[v] = true;
@@ -198,11 +208,9 @@ void addVertex(VertexSet *set, Vertex v)
             set->denseUpToDate = true;
             set->sparseUpToDate = false;
         }
-        // printf("return addVertex\n");
         return;
     }
     else {
-        // printf("196\n");
         updateDense(set);
         if (set->denseVertices[v] == false) {
             set->size++;
@@ -212,7 +220,6 @@ void addVertex(VertexSet *set, Vertex v)
             set->sparseUpToDate = false;
             updateSparse(set);
         }
-        // printf("return addVertex\n");
 
         return;
     }
@@ -222,7 +229,6 @@ void removeVertex(VertexSet *set, Vertex v)
 {
     ENSURES(set->size > 0);
     //this will convert it into dense
-    printf("removeVertex\n");
     updateDense(set, true);
     if (set->type == DENSE) {
 
