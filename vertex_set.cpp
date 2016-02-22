@@ -51,10 +51,10 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
             }
         }
         output[N - 1] = 0;
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Upsweep: %d\n",output[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Upsweep: %d\n",output[i]);
+        // }
         // downsweep phase.
         for (int twod = N / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
@@ -65,12 +65,12 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
                 output[i + twod1 - 1] += t;
             }
         }
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Sum: %d\n",output[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Sum: %d\n",output[i]);
+        // }
     } else {
-        printf("Going up\n");
+        // printf("Going up\n");
         int powN = upper_power_of_two(N);
         //Vertex* opN = (Vertex *)calloc(powN*sizeof(int),0);
         Vertex* opN = new Vertex[powN]();
@@ -84,10 +84,10 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
             }
         }
         opN[powN - 1] = 0;
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Upsweep: %d\n",opN[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Upsweep: %d\n",opN[i]);
+        // }
         // downsweep phase.
         for (int twod = powN / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
@@ -98,10 +98,10 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
                 opN[i + twod1 - 1] += t;
             }
         }
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Sum: %d\n",opN[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Sum: %d\n",opN[i]);
+        // }
 
         memcpy(output, opN, N*sizeof(int));
         //free(opN);
@@ -122,10 +122,10 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
             }
         }
         output[N - 1] = 0;
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Upsweep: %d\n",output[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Upsweep: %d\n",output[i]);
+        // }
         // downsweep phase.
         for (int twod = N / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
@@ -136,12 +136,12 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
                 output[i + twod1 - 1] += t;
             }
         }
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Sum: %d\n",output[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Sum: %d\n",output[i]);
+        // }
     } else {
-        printf("Going up\n");
+        // printf("Going up\n");
         int powN = upper_power_of_two(N);
         //Vertex* opN = (Vertex *)calloc(powN*sizeof(int),0);
         Vertex* opN = new Vertex[powN]();
@@ -155,10 +155,10 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
             }
         }
         opN[powN - 1] = 0;
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Upsweep: %d\n",opN[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Upsweep: %d\n",opN[i]);
+        // }
         // downsweep phase.
         for (int twod = powN / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
@@ -169,10 +169,10 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
                 opN[i + twod1 - 1] += t;
             }
         }
-        for (int i = 0; i<N; i++) {
-            printf("Bool: %d ",boolArray[i]);
-            printf("Sum: %d\n",opN[i]);
-        }
+        // for (int i = 0; i<N; i++) {
+        //     printf("Bool: %d ",boolArray[i]);
+        //     printf("Sum: %d\n",opN[i]);
+        // }
 
         memcpy(output, opN, N*sizeof(int));
         //free(opN);
@@ -181,20 +181,27 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
 
 }
 
-void packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
+int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
     Vertex* sums = new Vertex[n];
     prefix_sum(sums, boolArray, n);
+    int sum=0;
+    #pragma omp parallel for reduction(+:sum)
     for (int i = 0; i < n; ++i)
     {
         if (boolArray[i])
         {
             output[sums[i]] = input[i];
+            sum++;
         }
+
     }
     delete[] sums;
+    return sum;
 }
 
 void remDuplicates(Vertex* input, int size, int numNodes) {
+    
+
     Vertex* flags = new Vertex[numNodes];
     #pragma omp parallel for
     for (int i = 0; i < size; ++i)

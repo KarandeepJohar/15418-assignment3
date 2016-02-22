@@ -39,7 +39,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
                           bool removeDuplicates = true)
 {
 	int* degrees = new int[u->size];
-	// printf("%d\n",u->size );
+	printf("edgemap called %d\n",u->size );
 	updateSparse(u, true);
 	if (u->type == SPARSE)
 	{	
@@ -49,25 +49,45 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		for (int i = 0; i < u->size; ++i)
 		{
 			Vertex v = u->vertices[i];
+			printf("%d %d\n",i,v );
+
 			degrees[i] = outgoing_size(g, v);
 			sum_degrees += degrees[i];
 		}
-		printf("after calculating sum_degrees %d\n", u->size);
+		printf("after calculating sum_degrees %d\n", sum_degrees);
+
+
+
+
+
 		// VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes);
 		int* finalNeighbours = new int[sum_degrees];
 		int* offsets = new int[u->size];
 
 		prefix_sum(offsets, degrees, u->size);
 
-		// #pragma omp parallel for
+		for (int i = 0; i < u->size; ++i)
+		{
+			printf("%d\n", offsets[i]);
+		}
+
+
+
+		#pragma omp parallel for
+		for (int i = 0; i < sum_degrees; ++i)
+		{
+			finalNeighbours[i]=-1;
+		}
+
 		for (int i = 0; i < u->size; ++i)
 		{
 			Vertex v = u->vertices[i];
 			int offset = offsets[i];
 			const Vertex* start = outgoing_begin(g, v);
 			const Vertex* end = outgoing_end(g, v);
-			int j = 0;
 			printf("here\n" );
+			int j=0;
+			// #pragma omp parallel for
 			for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
 				if (f.cond(*neigh) && f.update(v, *neigh))
 				{
@@ -78,6 +98,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 				}
 			}
 		}
+
 		printf("99\n");
 		if (removeDuplicates) {
 			remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
@@ -97,13 +118,22 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 			}
 		}
 		printf("99\n");
-		packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
-		VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices);
+		int new_sum = packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
+		VertexSet *trueResult = newVertexSet(SPARSE, new_sum, u->numNodes, newSparseVertices);
+		updateDense(trueResult, true);
+		trueResult->sparseUpToDate=false;
 		delete[] tempBoolArray;
 		delete[] degrees;
 		delete[] offsets;
 		delete[] finalNeighbours;
 		printf("100\n");
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			if (trueResult->denseVertices[i]!=0)
+			{
+				printf("%d\n", i);
+			}
+		}
 		return trueResult;
 	}
 	else {
@@ -136,6 +166,14 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		for (int i = 0; i < u->numNodes; ++i)
 		{
 			sum += newDenseVertices[i];
+		}
+		printf("returned set\n");
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			if (newDenseVertices[i]!=0)
+			{
+				printf("%d\n", i);
+			}
 		}
 		return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
 
