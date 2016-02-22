@@ -39,8 +39,11 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
                           bool removeDuplicates = true)
 {
 	int* degrees = new int[u->size];
+	// printf("%d\n",u->size );
+	updateSparse(u, true);
 	if (u->type == SPARSE)
-	{
+	{	
+		printf("edgeMap\n");
 		int sum_degrees = 0;
 		#pragma omp parallel for reduction(+:sum_degrees)
 		for (int i = 0; i < u->size; ++i)
@@ -49,13 +52,14 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 			degrees[i] = outgoing_size(g, v);
 			sum_degrees += degrees[i];
 		}
+		printf("after calculating sum_degrees %d\n", u->size);
 		// VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes);
 		int* finalNeighbours = new int[sum_degrees];
 		int* offsets = new int[u->size];
 
-		// parallel_scan(offsets, degrees);
+		prefix_sum(offsets, degrees, u->size);
 
-		#pragma omp parallel for
+		// #pragma omp parallel for
 		for (int i = 0; i < u->size; ++i)
 		{
 			Vertex v = u->vertices[i];
@@ -63,6 +67,7 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 			const Vertex* start = outgoing_begin(g, v);
 			const Vertex* end = outgoing_end(g, v);
 			int j = 0;
+			printf("here\n" );
 			for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
 				if (f.cond(*neigh) && f.update(v, *neigh))
 				{
@@ -73,11 +78,11 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 				}
 			}
 		}
-
+		printf("99\n");
 		if (removeDuplicates) {
 			remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
 		}
-
+		printf("85\n");
 		Vertex* newSparseVertices = new Vertex[sum_degrees];
 
 		bool* tempBoolArray = new bool[sum_degrees];
@@ -91,12 +96,14 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 				tempBoolArray[i] = false;
 			}
 		}
+		printf("99\n");
 		packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
 		VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices);
 		delete[] tempBoolArray;
 		delete[] degrees;
 		delete[] offsets;
 		delete[] finalNeighbours;
+		printf("100\n");
 		return trueResult;
 	}
 	else {
