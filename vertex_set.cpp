@@ -45,7 +45,7 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
         // upsweep phase.
         for (int twod = 1; twod < N; twod *= 2) {
             int twod1 = twod * 2;
-            //#pragma omp parallel for
+            #pragma omp parallel for
             for (int i = 0; i < N; i += twod1) {
                 output[i + twod1 - 1] += output[i + twod - 1];
             }
@@ -58,7 +58,7 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
         // downsweep phase.
         for (int twod = N / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
-            //#pragma omp parallel for
+            #pragma omp parallel for
             for (int i = 0; i < N; i += twod1) {
                 int t = output[i + twod - 1];
                 output[i + twod - 1] = output[i + twod1 - 1];
@@ -78,7 +78,7 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
         // upsweep phase.
         for (int twod = 1; twod < powN; twod *= 2) {
             int twod1 = twod * 2;
-            //#pragma omp parallel for
+            #pragma omp parallel for
             for (int i = 0; i < powN; i += twod1) {
                 opN[i + twod1 - 1] += opN[i + twod - 1];
             }
@@ -91,7 +91,7 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
         // downsweep phase.
         for (int twod = powN / 2; twod >= 1; twod /= 2) {
             int twod1 = twod * 2;
-            //#pragma omp parallel for
+            #pragma omp parallel for
             for (int i = 0; i < powN; i += twod1) {
                 int t = opN[i + twod - 1];
                 opN[i + twod - 1] = opN[i + twod1 - 1];
