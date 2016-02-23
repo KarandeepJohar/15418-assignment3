@@ -126,9 +126,9 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
 }
 
 int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
-    Vertex* sums = new Vertex[n+1];
-    sums[0]=0;
-    prefix_sum(sums+1, boolArray, n);
+    Vertex* sums = new Vertex[n + 1];
+    sums[0] = 0;
+    prefix_sum(sums + 1, boolArray, n);
     int sum = 0;
     #pragma omp parallel for reduction(+:sum)
     for (int i = 0; i < n; ++i)
@@ -146,11 +146,14 @@ int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
 void remDuplicates(Vertex* input, int size, int numNodes) {
 
 
-    static Vertex* flags = new Vertex[numNodes];
-    #pragma omp parallel for
-    for (int i = 0; i < numNodes; ++i)
-    {
-        flags[i] = -1;
+    static Vertex* flags = NULL;
+    if (!flags) {
+        flags = new Vertex[numNodes];
+        #pragma omp parallel for
+        for (int i = 0; i < numNodes; ++i)
+        {
+            flags[i] = -1;
+        }
     }
     #pragma omp parallel for
     for (int i = 0; i < size; ++i)
@@ -238,10 +241,10 @@ void freeVertexSet(VertexSet *set)
 void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes) {
 
     // #pragma omp parallel for
-    for (int i = 0; i < numNodes; ++i)
-    {
-        dense[i] = false;
-    }
+    // for (int i = 0; i < numNodes; ++i)
+    // {
+    //     dense[i] = false;
+    // }
     #pragma omp parallel for
     for (int i = 0; i < size ; ++i)
     {
@@ -251,9 +254,9 @@ void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes
 
 void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
 
-    Vertex* sums = new Vertex[numNodes+1];
-    sums[0]=0;
-    prefix_sum(sums+1, dense, numNodes);
+    static Vertex* sums = new Vertex[numNodes + 1];
+    sums[0] = 0;
+    prefix_sum(sums + 1, dense, numNodes);
     #pragma omp parallel for
     for (int i = 0; i < numNodes; ++i)
     {
@@ -262,14 +265,14 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
             sparse[sums[i]] = i;
         }
     }
-    delete[] sums;
+    // delete[] sums;
 }
 
 
 void updateDense(VertexSet *set, bool convert = false) {
     if (set->denseVertices == NULL)
     {
-        set->denseVertices = new bool[set->numNodes];
+        set->denseVertices = new bool[set->numNodes]();
 
     }
     if (!(set->denseUpToDate))
