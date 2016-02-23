@@ -228,7 +228,7 @@ void remDuplicates(Vertex* input, int size, int numNodes) {
             }
         }
     }
-    delete[] flags;
+    // delete[] flags;
 }
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
