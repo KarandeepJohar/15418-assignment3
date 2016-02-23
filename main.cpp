@@ -63,28 +63,28 @@ bool compareApprox(Graph graph, T* ref, T* stu)
 template <class T>
 bool compareArraysAndDisplay(Graph graph, T* ref, T*stu) 
 {
-  printf("\n----------------------------------\n");
-  printf("Visualization of student results");
-  printf("\n----------------------------------\n\n");
+  //printf("\n----------------------------------\n");
+  //printf("Visualization of student results");
+  //printf("\n----------------------------------\n\n");
 
-  int grid_dim = (int)sqrt(graph->num_nodes);
-  for (int j=0; j<grid_dim; j++) {
-    for (int i=0; i<grid_dim; i++) {
-      printf("%02d ", stu[j*grid_dim + i]);
-    }
-    printf("\n");
-  }
-  printf("\n----------------------------------\n");
-  printf("Visualization of reference results");
-  printf("\n----------------------------------\n\n");
+  //int grid_dim = (int)sqrt(graph->num_nodes);
+  //for (int j=0; j<grid_dim; j++) {
+  //  for (int i=0; i<grid_dim; i++) {
+  //    printf("%02d ", stu[j*grid_dim + i]);
+  //  }
+  //  printf("\n");
+  //}
+  //printf("\n----------------------------------\n");
+  //printf("Visualization of reference results");
+  //printf("\n----------------------------------\n\n");
 
-  grid_dim = (int)sqrt(graph->num_nodes);
-  for (int j=0; j<grid_dim; j++) {
-    for (int i=0; i<grid_dim; i++) {
-      printf("%02d ", ref[j*grid_dim + i]);
-    }
-    printf("\n");
-  }
+  //grid_dim = (int)sqrt(graph->num_nodes);
+  //for (int j=0; j<grid_dim; j++) {
+  //  for (int i=0; i<grid_dim; i++) {
+  //    printf("%02d ", ref[j*grid_dim + i]);
+  //  }
+  //  printf("\n");
+  //}
 
   for (int i = 0; i < graph->num_nodes; i++) {
     if (ref[i] != stu[i]) {
