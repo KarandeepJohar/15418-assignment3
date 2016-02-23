@@ -176,23 +176,25 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 		//{
 		//	newDenseVertices[i] = false;
 		//}
-
-		#pragma omp parallel for
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			if (u->denseVertices[i])
-			{
-				newDenseVertices[i] = f(i);
-			} else {
-				newDenseVertices[i] = false;
-      }
-		}
 		int sum = 0;
-		#pragma omp parallel for reduction(+:sum)
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			sum += newDenseVertices[i];
-		}
+        #pragma omp parallel
+        {
+		    #pragma omp for
+		    for (int i = 0; i < u->numNodes; ++i)
+		    {
+		    	if (u->denseVertices[i])
+		    	{
+		    		newDenseVertices[i] = f(i);
+		    	} else {
+		    		newDenseVertices[i] = false;
+                }
+		    }
+		    #pragma omp for reduction(+:sum)
+		    for (int i = 0; i < u->numNodes; ++i)
+		    {
+		    	sum += newDenseVertices[i];
+		    }
+        }
 		return newVertexSet(DENSE, sum, u->numNodes, newDenseVertices);
 	}
 	else {
