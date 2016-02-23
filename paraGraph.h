@@ -35,36 +35,37 @@
  * generation as these methods will be inlined.
  */
 template <class F>
-static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
+static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
                           bool removeDuplicates = true)
 {
 	// updateSparse(u, true);
-	if (u->type == SPARSE) {
-		int sum_degrees = 0;
-		// #pragma omp parallel for reduction(+:sum_degrees)
-		for (int i = 0; i < u->size; ++i)
-		{
-			Vertex v = u->vertices[i];
-			sum_degrees += outgoing_size(g, v);
-		}
+	// updateDense(u, true);
+	// if (u->type == DENSE) {
+		// int sum_degrees = 0;
+		// // #pragma omp parallel for reduction(+:sum_degrees)
+		// for (int i = 0; i < u->size; ++i)
+		// {
+		// 	Vertex v = u->vertices[i];
+		// 	sum_degrees += outgoing_size(g, v);
+		// }
 
-		VertexSet *trueResult = newVertexSet(DENSE, u->numNodes, u->numNodes);
-		// #pragma omp parallel for
-		for (int i = 0; i < g->num_nodes; i++) {
-			const Vertex* start = incoming_begin(g, i);
-			const Vertex* end = incoming_end(g, i);
-			for (const Vertex* v = start; v != end; v++) {
-				for ( int j = 0; j < u->size; j++) {
-					if (u->vertices[j] == *v && f.cond(i) && f.update(*v, i)) {
-						//#pragma omp critical
-						addVertex(trueResult, i);
-					}
-				}
-			}
-		}
-		// printf("returning from sparse\n");
-		return trueResult;
-	} else {
+		// VertexSet *trueResult = newVertexSet(DENSE, u->numNodes, u->numNodes);
+		// // #pragma omp parallel for
+		// for (int i = 0; i < g->num_nodes; i++) {
+		// 	const Vertex* start = incoming_begin(g, i);
+		// 	const Vertex* end = incoming_end(g, i);
+		// 	for (const Vertex* v = start; v != end; v++) {
+		// 		for ( int j = 0; j < u->size; j++) {
+		// 			if (u->vertices[j] == *v && f.cond(i) && f.update(*v, i)) {
+		// 				//#pragma omp critical
+		// 				addVertex(trueResult, i);
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// // printf("returning from sparse\n");
+		// return trueResult;
+	// } else {
 		bool* newDenseVertices = new bool[u->numNodes]();
 		//#pragma omp parallel for
 		//for (int i = 0; i < u->numNodes; ++i)
@@ -72,55 +73,78 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 		//	newDenseVertices[i] = false;
 		//}
 		int sum = 0;
-		#pragma omp parallel
-		{
-			#pragma omp for
-			for (int i = 0; i < g->num_nodes; i++) {
-				const Vertex* start = incoming_begin(g, i);
-				const Vertex* end = incoming_end(g, i);
-				for (const Vertex* v = start; v != end; v++) {
-					if (u->denseVertices[*v] == true && f.cond(i) && f.update(*v, i)) {
-						newDenseVertices[i] = true;
-					}
+
+		#pragma omp parallel for
+		for (int i = 0; i < g->num_nodes; i++) {
+			const Vertex* start = incoming_begin(g, i);
+			const Vertex* end = incoming_end(g, i);
+			for (const Vertex* v = start; v != end; v++) {
+				if (u->denseVertices[*v] == true && f.cond(i) && f.update(*v, i)) {
+					newDenseVertices[i] = true;
 				}
 			}
-
-			#pragma omp for reduction(+:sum)
-			for (int i = 0; i < u->numNodes; ++i)
-			{
-				sum += newDenseVertices[i];
-			}
 		}
+
+		#pragma omp parallel for reduction(+:sum)
+		for (int i = 0; i < u->numNodes; ++i)
+		{
+			sum += newDenseVertices[i];
+		}
+
 		return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
-	}
+	// }
 }
 
 template <class F>
-static VertexSet *edgeMapTopDown(Graph g, VertexSet *u, F &f,
+static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
                                  bool removeDuplicates = true)
 {
-	int* degrees = new int[u->size];
+	int threshold = u->numNodes/20;
+	// int threshold =10000000;
+	// int* degrees = new int[u->size];
+	int* offsets = new int[u->size+1];
+	int *degrees;
+	degrees = offsets+1;
 	// printf("edgemap called %d\n",u->size );
 	updateSparse(u, true);
-	if (u->type == SPARSE)
+	int sum_degrees = 0;
+	#pragma omp parallel for reduction(+:sum_degrees)
+	for (int i = 0; i < u->size; ++i)
 	{
+		Vertex v = u->vertices[i];
+		// printf("%d %d\n",i, v );
+		degrees[i] = outgoing_size(g, v);
+		sum_degrees += degrees[i];
+	}
+	if (u->size+sum_degrees>threshold)
+	{
+		updateDense(u, true);
+		return edgeMapBottomUp(g, u, f);
+	}
+	// if (u->type == SPARSE)
+	// {
 		// printf("edgeMap\n");
-		int sum_degrees = 0;
-		#pragma omp parallel for reduction(+:sum_degrees)
-		for (int i = 0; i < u->size; ++i)
-		{
-			Vertex v = u->vertices[i];
-			// printf("%d %d\n",i, v );
-			degrees[i] = outgoing_size(g, v);
-			sum_degrees += degrees[i];
-		}
+		// int sum_degrees = 0;
+		// #pragma omp parallel for reduction(+:sum_degrees)
+		// for (int i = 0; i < u->size; ++i)
+		// {
+		// 	Vertex v = u->vertices[i];
+		// 	// printf("%d %d\n",i, v );
+		// 	degrees[i] = outgoing_size(g, v);
+		// 	sum_degrees += degrees[i];
+		// }
+		// for (int i = 0; i < u->size; ++i)
+		// {
+		// 	printf("%d %d\n",i,degrees[i]);
+		// }
 		int* finalNeighbours = new int[sum_degrees];
-		int* offsets = new int[u->size];
-
+		// printf("sum %d\n",sum_degrees );
 		prefix_sum(offsets, degrees, u->size);
-
-
-
+		offsets[0]=0;
+		// for (int i = 0; i < u->size; ++i)
+		// {
+		// 	printf("%d %d\n",i,offsets[i]);
+		// }
 		#pragma omp parallel for
 		for (int i = 0; i < u->size; ++i)
 		{
@@ -142,6 +166,10 @@ static VertexSet *edgeMapTopDown(Graph g, VertexSet *u, F &f,
 		}
 
 		// printf("99\n");
+		// for (int i = 0; i < u->size; ++i)
+		// {
+		// 	printf("%d %d\n",i,finalNeighbours[i]);
+		// }
 		if (removeDuplicates) {
 			remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
 		}
@@ -163,47 +191,47 @@ static VertexSet *edgeMapTopDown(Graph g, VertexSet *u, F &f,
 		int new_sum = packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
 		VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices, new_sum);
 		delete[] tempBoolArray;
-		delete[] degrees;
+		// delete[] degrees;
 		delete[] offsets;
 		delete[] finalNeighbours;
 		// printf("100\n");
 		return trueResult;
-	}
-	else {
-		bool* newDenseVertices = new bool[u->numNodes];
-		#pragma omp parallel for
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			newDenseVertices[i] = false;
-		}
-		#pragma omp parallel for
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			if (u->denseVertices[i])
-			{
-				Vertex v = i;
-				const Vertex* start = outgoing_begin(g, v);
-				const Vertex* end = outgoing_end(g, v);
-				int j = 0;
-				for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
-					if (f.cond(*neigh) && f.update(v, *neigh))
-					{
-						newDenseVertices[*neigh] = true;
-					}
-				}
+	// }
+	// else {
+	// 	bool* newDenseVertices = new bool[u->numNodes];
+	// 	#pragma omp parallel for
+	// 	for (int i = 0; i < u->numNodes; ++i)
+	// 	{
+	// 		newDenseVertices[i] = false;
+	// 	}
+	// 	#pragma omp parallel for
+	// 	for (int i = 0; i < u->numNodes; ++i)
+	// 	{
+	// 		if (u->denseVertices[i])
+	// 		{
+	// 			Vertex v = i;
+	// 			const Vertex* start = outgoing_begin(g, v);
+	// 			const Vertex* end = outgoing_end(g, v);
+	// 			int j = 0;
+	// 			for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
+	// 				if (f.cond(*neigh) && f.update(v, *neigh))
+	// 				{
+	// 					newDenseVertices[*neigh] = true;
+	// 				}
+	// 			}
 
-			}
-		}
-		int sum = 0;
-		#pragma omp parallel for reduction(+:sum)
-		for (int i = 0; i < u->numNodes; ++i)
-		{
-			sum += newDenseVertices[i];
-		}
-		return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
+	// 		}
+	// 	}
+	// 	int sum = 0;
+	// 	#pragma omp parallel for reduction(+:sum)
+	// 	for (int i = 0; i < u->numNodes; ++i)
+	// 	{
+	// 		sum += newDenseVertices[i];
+	// 	}
+	// 	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
 
 
-	}
+	// }
 }
 
 
