@@ -38,6 +38,26 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
                           bool removeDuplicates = true)
 {
+    VertexSet *trueResult = newVertexSet(SPARSE, g->num_nodes, u->numNodes);
+	updateSparse(u, true);
+    for(int i =0; i < g->num_nodes; i++) {
+        const Vertex* start = incoming_begin(g, i);
+        const Vertex* end = incoming_end(g, i);
+        for(const Vertex* v =start; v!= end; v++) {
+            for( int j=0; j< u->size; j++) {
+                    if (u->vertices[j] == *v && f.cond(i) && f.update(u->vertices[j], i)) {
+                        addVertex(trueResult, i);
+                }
+            }
+        }
+    }
+    return trueResult;
+}
+                    
+template <class F>
+static VertexSet *edgeMapTopDown(Graph g, VertexSet *u, F &f,
+                          bool removeDuplicates = true)
+{
 	int* degrees = new int[u->size];
 	// printf("edgemap called %d\n",u->size );
 	updateSparse(u, true);
