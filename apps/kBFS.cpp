@@ -154,8 +154,9 @@ void kBFS(graph *g, int *distField) {
 
   visited = (int**) malloc(sizeof(int*) * g->num_nodes);
   nextVisited = (int**) malloc(sizeof(int*) * g->num_nodes);
-
-  for (int i = 0; i < g->num_nodes; i++) {
+  int gNumNodes = g->num_nodes;
+  #pragma omp parallel for default(none) shared(gNumNodes, visited, nextVisited)
+  for (int i = 0; i < gNumNodes; i++) {
     visited[i] = (int*) malloc(sizeof(int) * NUMWORDS);
     nextVisited[i] = (int*) malloc(sizeof(int) * NUMWORDS);
     memset(visited[i], 0, sizeof(int) * NUMWORDS);
@@ -167,6 +168,7 @@ void kBFS(graph *g, int *distField) {
   srand(0);
   int numSources = std::min(K, g->num_nodes);
   int S[numSources]; // the set of source nodes
+#pragma omp parallel for
   for (int i = 0; i < numSources; i++) 
     S[i] = (std::rand()/(float)RAND_MAX) * g->num_nodes;
 
@@ -199,6 +201,7 @@ void kBFS(graph *g, int *distField) {
     vertexMap(frontier, vc, NORETURN);
   }
 
+#pragma omp parallel for
   for (int i = 0; i < g->num_nodes; i++) {
     free(visited[i]);
     free(nextVisited[i]);
