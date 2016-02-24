@@ -33,7 +33,7 @@ unsigned long upper_power_of_two(unsigned long v)
 
 
 void prefix_sum(Vertex* output, bool* boolArray, int N) {
-    #pragma omp parallel for
+    #pragma omp parallel for default(none) shared(N, output, boolArray)
     for (int i = 0; i < N; i++) {
         if (boolArray[i]) {
             output[i] = 1;
