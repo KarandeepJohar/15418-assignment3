@@ -38,16 +38,18 @@ template <class F>
 static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
                                   bool removeDuplicates = true)
 {
+	// printf("bottom up\n");
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
 	bool *ptrDenseVertices = u->denseVertices;
 	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices)
 	for (int i = 0; i < g->num_nodes; i++) {
-		if (!ptrDenseVertices[i] || !newDenseVertices[i]) {
+		if (f.cond(i)&&!newDenseVertices[i]) 
+		{
 			const Vertex* start = incoming_begin(g, i);
 			const Vertex* end = incoming_end(g, i);
 			for (const Vertex* v = start; v != end; v++) {
-				if (ptrDenseVertices[*v] == true && f.cond(i) && f.update(*v, i)) {
+				if (ptrDenseVertices[*v] == true &&f.cond(i)&& f.updateNoWorries(*v, i)) {
 					newDenseVertices[i] = true;
 				}
 			}
@@ -73,7 +75,7 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
                           bool removeDuplicates = true)
 {
-	int threshold = u->numNodes / 10;
+	int threshold = u->numNodes / 20;
 	int sum_degrees;
 	if (u->type==DENSE)
 	{
@@ -105,6 +107,8 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 		delete[] offsets;
 		return edgeMapBottomUp(g, u, f);
 	}
+	// printf("top down\n");
+
 	int* finalNeighbours = new int[sum_degrees];
 	prefix_sum(offsets, degrees, u->size);
 	offsets[0] = 0;
