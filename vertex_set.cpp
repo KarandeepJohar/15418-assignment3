@@ -73,8 +73,6 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
             #pragma omp single
             memcpy(partial + 1, temp + 1, sizeof(int) * (num_threads - 1));
         }
-        // printf("NOOOO\n");
-        /*update original array*/
         for (i = work * mynum; i < (last = work * mynum + work < n ? work * mynum + work : n); i++)
             arr[i] += partial[mynum] - arr[last - 1];
     }
@@ -114,8 +112,6 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
             #pragma omp single
             memcpy(partial + 1, temp + 1, sizeof(int) * (num_threads - 1));
         }
-        // printf("NOOOO\n");
-        /*update original array*/
         for (i = work * mynum; i < (last = work * mynum + work < n ? work * mynum + work : n); i++)
             arr[i] += partial[mynum] - arr[last - 1];
     }
@@ -155,28 +151,31 @@ void remDuplicates(Vertex* input, int size, int numNodes) {
             flags[i] = -1;
         }
     }
-    #pragma omp parallel for
-    for (int i = 0; i < size; ++i)
+    #pragma omp parallel
     {
-        if (input[i] != -1 && flags[input[i]] == -1)
+        #pragma omp for schedule(static)
+        for (int i = 0; i < size; ++i)
         {
-            __sync_bool_compare_and_swap(&flags[input[i]], -1, i);
-        }
-    }
-    #pragma omp parallel for
-    for (int i = 0; i < size; ++i)
-    {
-        if (input[i] != -1)
-        {
-            if (flags[input[i]] == i)
+            if (input[i] != -1 && flags[input[i]] == -1)
             {
-                flags[input[i]] = -1;
-            } else {
-                input[i] = -1;
+                __sync_bool_compare_and_swap(&flags[input[i]], -1, i);
+            }
+        }
+        #pragma omp for schedule(static)
+        for (int i = 0; i < size; ++i)
+        {
+            if (input[i] != -1)
+            {
+                if (flags[input[i]] == i)
+                {
+                    flags[input[i]] = -1;
+                } else {
+                    input[i] = -1;
+                }
             }
         }
     }
-    // delete[] flags;
+// delete[] flags;
 }
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
@@ -201,7 +200,7 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
     return vs;
 }
 
-VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* denseVertices) {
+VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* denseVertices, int sum_degrees) {
     VertexSet* vs = new VertexSet;
     vs->numNodes = numNodes;
     vs->size = capacity;
@@ -212,6 +211,7 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* de
     vs->sparseUpToDate = false;
     vs->denseVertices = denseVertices;
     vs->vertices = NULL;
+    vs->sum_degrees=sum_degrees;
     return vs;
 }
 
@@ -245,7 +245,7 @@ void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes
     // {
     //     dense[i] = false;
     // }
-    #pragma omp parallel for
+    #pragma simd
     for (int i = 0; i < size ; ++i)
     {
         dense[sparse[i]] = true;
@@ -257,7 +257,7 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
     static Vertex* sums = new Vertex[numNodes + 1];
     sums[0] = 0;
     prefix_sum(sums + 1, dense, numNodes);
-    #pragma omp parallel for
+    #pragma simd
     for (int i = 0; i < numNodes; ++i)
     {
         if (dense[i])
