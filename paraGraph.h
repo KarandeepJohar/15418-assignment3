@@ -11,7 +11,7 @@
 #include <set>
 #include "mic.h"
 #include "graph_internal.h"
-
+#include <omp.h>
 /*
  * edgeMap --
  *
@@ -42,7 +42,9 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
 	bool *ptrDenseVertices = u->denseVertices;
-	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices)
+    int chunkSize = std::max(256,u->numNodes/(omp_get_num_threads()*128));
+
+	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices, chunkSize) schedule(static, chunkSize)
 	for (int i = 0; i < g->num_nodes; i++) {
 		if (f.iskBFS() || (!ptrDenseVertices[i] && f.cond(i) && !newDenseVertices[i]))
 		{
