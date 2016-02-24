@@ -14,6 +14,7 @@ class Bfs
     Bfs(Graph g, int* solution)
       : currentDistance(1), distances_(solution)
     {
+      #pragma simd
       for (int i = 0; i < num_nodes(g); i++) {
         distances_[i] = NA;
       }

@@ -31,6 +31,7 @@ class RadiiUpdate
 
     bool update(Vertex src, Vertex dst) {
       bool changed = false;
+      #pragma simd
       for (int j = 0; j < NUMWORDS; j++) {
         if (visited[dst][j] != visited[src][j]) {
           // word-wide or
@@ -60,6 +61,7 @@ class VisitedCopy
       visited(visited), nextVisited(nextVisited) {};
 
     bool operator()(Vertex v) {
+      #pragma simd
       for (int j = 0; j < NUMWORDS; j++) { //parallelize this loop with simd
         visited[v][j] = nextVisited[v][j];
       }
@@ -87,25 +89,10 @@ class Init
       int bit = k % WORDSIZE;
       int word = k/WORDSIZE;
 
-      int oldWord = visited[v][word];
-      int newWord = oldWord | 1 << bit;
-      bool success = false;
 
-      while (!success) {
-        success = __sync_bool_compare_and_swap(&visited[v][word], oldWord, newWord);
-	oldWord = visited[v][word];
-	newWord = oldWord | 1 << bit;
-      }
-
-      oldWord = nextVisited[v][word];
-      newWord = oldWord | 1 << bit;
-      success = false;
-
-      while (!success) {
-	success = __sync_bool_compare_and_swap(&nextVisited[v][word], oldWord, newWord);
-    	oldWord = nextVisited[v][word];
-	newWord = oldWord | 1 << bit;
-      }
+       __sync_fetch_and_or(&visited[v][word], 1 << bit);
+	     __sync_fetch_and_or(&nextVisited[v][word], 1 << bit);
+      
 
       radii[v] = 0;
       return false;

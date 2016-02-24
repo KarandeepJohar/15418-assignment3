@@ -40,42 +40,58 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 {
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
-    bool *ptrDenseVertices = u->denseVertices;
+	bool *ptrDenseVertices = u->denseVertices;
 	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices)
 	for (int i = 0; i < g->num_nodes; i++) {
-        if(!ptrDenseVertices[i] || !newDenseVertices[i]) {
-		const Vertex* start = incoming_begin(g, i);
-		const Vertex* end = incoming_end(g, i);
-		for (const Vertex* v = start; v != end; v++) {
-			if (ptrDenseVertices[*v] == true && f.cond(i) && f.update(*v, i)) {
-				newDenseVertices[i] = true;
+		if (!ptrDenseVertices[i] || !newDenseVertices[i]) {
+			const Vertex* start = incoming_begin(g, i);
+			const Vertex* end = incoming_end(g, i);
+			for (const Vertex* v = start; v != end; v++) {
+				if (ptrDenseVertices[*v] == true && f.cond(i) && f.update(*v, i)) {
+					newDenseVertices[i] = true;
+				}
 			}
 		}
-        }
 	}
-    int uNumNodes = u->numNodes;
-	#pragma omp parallel for reduction(+:sum) default(none) shared(uNumNodes, newDenseVertices)
+	int uNumNodes = u->numNodes;
+	int sum_degrees =0;
+	#pragma omp parallel for reduction(+:sum,sum_degrees) default(none) shared(uNumNodes, newDenseVertices,g)
 	for (int i = 0; i < uNumNodes; ++i)
 	{
-		sum += newDenseVertices[i];
+		if (newDenseVertices[i])
+		{
+			sum += newDenseVertices[i];
+			sum_degrees+=outgoing_size(g, i);
+		}
+		
 	}
-
-	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices);
+	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
 	// }
 }
 
 template <class F>
-static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
+static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
                           bool removeDuplicates = true)
 {
-	int threshold = u->numNodes / 20;
+	int threshold = u->numNodes / 10;
+	int sum_degrees;
+	if (u->type==DENSE)
+	{
+		sum_degrees = u->sum_degrees;
+		if (u->size + sum_degrees > threshold)
+		{
+			updateDense(u, true);
+			return edgeMapBottomUp(g, u, f);
+		}
+
+	}
 	int* offsets = new int[u->size + 1];
 	int *degrees;
 	degrees = offsets + 1;
 	updateSparse(u, true);
-	int sum_degrees = 0;
-    Vertex *ptrVertices = u->vertices;
-    int uSize = u->size;
+	sum_degrees = 0;
+	Vertex *ptrVertices = u->vertices;
+	int uSize = u->size;
 	#pragma omp parallel for reduction(+:sum_degrees) default(none) shared(ptrVertices, degrees, g, uSize)
 	for (int i = 0; i < uSize; ++i)
 	{
@@ -85,13 +101,14 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 	}
 	if (u->size + sum_degrees > threshold)
 	{
-        updateDense(u, true);
+		updateDense(u, true);
+		delete[] offsets;
 		return edgeMapBottomUp(g, u, f);
 	}
 	int* finalNeighbours = new int[sum_degrees];
 	prefix_sum(offsets, degrees, u->size);
 	offsets[0] = 0;
-	#pragma omp parallel for default(none) shared(g, uSize, ptrVertices, f, offsets, finalNeighbours) 
+	#pragma omp parallel for default(none) shared(g, uSize, ptrVertices, f, offsets, finalNeighbours)
 	for (int i = 0; i < uSize; ++i)
 	{
 		Vertex v = ptrVertices[i];
@@ -115,20 +132,19 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
 	}
 	Vertex* newSparseVertices = new Vertex[sum_degrees];
 
-	bool* tempBoolArray = new bool[sum_degrees];
+	static bool* tempBoolArray = new bool[u->numNodes]();
 	#pragma omp parallel for default(none) shared(sum_degrees, finalNeighbours, tempBoolArray)
 	for (int i = 0; i < sum_degrees; ++i)
 	{
 		if (finalNeighbours[i] >= 0)
 		{
 			tempBoolArray[i] = true;
-		} else {
+		}else{
 			tempBoolArray[i] = false;
 		}
 	}
 	int new_sum = packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
 	VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices, new_sum);
-	delete[] tempBoolArray;
 	delete[] offsets;
 	delete[] finalNeighbours;
 	return trueResult;
@@ -154,15 +170,15 @@ static VertexSet *edgeMap(Graph g, VertexSet *u, F &f,
  * return NULL (it need not build and create a vertex set)
  */
 template <class F>
-static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
+static VertexSet *vertexMap(VertexSet * u, F & f, bool returnSet = true)
 {
 
 	if (returnSet) {
 		updateDense(u, true);
 		bool* newDenseVertices = new bool[u->numNodes];
 		int sum = 0;
-        int uNumNodes = u->numNodes;
-        bool *ptrDenseVertices = u->denseVertices;
+		int uNumNodes = u->numNodes;
+		bool *ptrDenseVertices = u->denseVertices;
 		#pragma omp parallel default (none) shared(f,uNumNodes, ptrDenseVertices, newDenseVertices, sum)
 		{
 			#pragma omp for
@@ -186,15 +202,15 @@ static VertexSet *vertexMap(VertexSet *u, F &f, bool returnSet = true)
 	else {
 		if (u->type == SPARSE)
 		{
-            int uSize = u->size;
-            Vertex *ptrVertices = u->vertices;
+			int uSize = u->size;
+			Vertex *ptrVertices = u->vertices;
 			# pragma omp parallel for default(none) shared(uSize, f, ptrVertices)
 			for (int i = 0; i < uSize; i++)
 				f(ptrVertices[i]);
 		}
 		else {
-            int uNumNodes = u->numNodes;
-            bool *ptrDenseVertices = u->denseVertices;
+			int uNumNodes = u->numNodes;
+			bool *ptrDenseVertices = u->denseVertices;
 			# pragma omp parallel for default(none) shared(uNumNodes, f, ptrDenseVertices)
 			for (int i = 0; i < uNumNodes; ++i)
 			{
