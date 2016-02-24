@@ -38,6 +38,9 @@ public:
   bool cond(Vertex v) {
     return distances_[v] == NA;
   }
+  bool iskBFS() {
+      return false;
+  }
 
   int currentDistance;
 

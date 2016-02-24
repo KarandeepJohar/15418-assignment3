@@ -44,12 +44,12 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 	bool *ptrDenseVertices = u->denseVertices;
 	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices)
 	for (int i = 0; i < g->num_nodes; i++) {
-		if (!ptrDenseVertices[i] && f.cond(i) && !newDenseVertices[i])
+		if (f.iskBFS() || (!ptrDenseVertices[i] && f.cond(i) && !newDenseVertices[i]))
 		{
 			const Vertex* start = incoming_begin(g, i);
 			const Vertex* end = incoming_end(g, i);
 			for (const Vertex* v = start; v != end; v++) {
-				if (ptrDenseVertices[*v] == true && f.updateNoWorries(*v, i)) {
+				if (ptrDenseVertices[*v] == true && f.cond(i) && f.updateNoWorries(*v, i)) {
 					newDenseVertices[i] = true;
 					// break;
 				}

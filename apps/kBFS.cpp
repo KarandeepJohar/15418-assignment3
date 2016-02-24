@@ -62,6 +62,9 @@ class RadiiUpdate
     bool cond(Vertex v) {
       return true;
     }
+    bool iskBFS() {
+        return true;
+    }
 };
 
 
