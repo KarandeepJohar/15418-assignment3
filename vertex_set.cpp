@@ -245,7 +245,7 @@ void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes
     // {
     //     dense[i] = false;
     // }
-    #pragma simd
+    #pragma omp parallel for
     for (int i = 0; i < size ; ++i)
     {
         dense[sparse[i]] = true;
@@ -257,7 +257,7 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
     static Vertex* sums = new Vertex[numNodes + 1];
     sums[0] = 0;
     prefix_sum(sums + 1, dense, numNodes);
-    #pragma simd
+    #pragma omp parallel for
     for (int i = 0; i < numNodes; ++i)
     {
         if (dense[i])

@@ -25,7 +25,8 @@ def runGraph(paraGraph, g):
     args = [
         paraGraph,
         "grade",
-        g  # Don't run ref
+        g,
+        "-r"  # Don't run ref
     ]
     proc = subprocess.Popen(args, stdout=subprocess.PIPE)
 
