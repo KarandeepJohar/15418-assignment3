@@ -45,6 +45,7 @@ struct State
   bool updateNoWorries(Vertex s, Vertex d)
   {
     float add = pcurr[s] / outgoing_size(graph, s);
+    #pragma omp atomic
     pnext[d] += add;
     return true;
   }
@@ -77,13 +78,13 @@ struct State
 template <typename T>
 struct Local
 {
-  Local(Graph graph_, T* pcurr_, T* pnext_, T* diff_, T damping_, T addConst_)
-    : graph(graph_), pcurr(pcurr_), pnext(pnext_), diff(diff_), damping(damping_), addConst(addConst_)
+  Local(Graph graph_, T* pcurr_, T* pnext_, T* diff_, T damping_)
+    : graph(graph_), pcurr(pcurr_), pnext(pnext_), diff(diff_), damping(damping_)
   {}
 
   bool operator()(Vertex i)
   {
-    pnext[i] = (damping * pnext[i]) + addConst;
+    pnext[i] = (damping * pnext[i]) + (1 - damping) / num_nodes(graph);
     diff[i] = fabs(pnext[i] - pcurr[i]);
     pcurr[i] = 0.f;
     return true;
@@ -96,7 +97,6 @@ struct Local
 
   T damping;
   T convergence;
-  T addConst;
 };
 
 
@@ -109,10 +109,9 @@ void pageRank(Graph g, float* solution, float damping, float convergence)
   for (int i = 0; i < numNodes; i++) {
     addVertex(frontier, i);
   }
-  float addConst = (1 - damping) / numNodes;
   float error = INFINITY;
   while (error > convergence) {
-    Local<float> local(g, s.pcurr, s.pnext, s.diff, damping, addConst);
+    Local<float> local(g, s.pcurr, s.pnext, s.diff, damping);
 
     VertexSet* frontier2 = edgeMap<State<float> >(g, frontier, s);
     VertexSet* frontier3 = vertexMap<Local<float> >(frontier2, local);
