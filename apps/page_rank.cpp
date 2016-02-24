@@ -21,12 +21,10 @@ struct State
     pcurr = (T*)(malloc(sizeof(T) * numNodes));
     pnext = (T*)(malloc(sizeof(T) * numNodes));
     diff = (T*)(malloc(sizeof(T) * numNodes));
-    psize = (T*)(malloc(sizeof(T) * numNodes));
-    #pragma omp parallel for
+
     for (int i = 0; i < numNodes; i++) {
       pcurr[i] = 1.0 / numNodes;
       pnext[i] = 0.0;
-      psize[i] = outgoing_size(graph, i);
     }
   }
 
@@ -35,18 +33,19 @@ struct State
     free(diff);
     free(pnext);
     free(pcurr);
-    free(psize);
   }
 
   bool update(Vertex s, Vertex d)
   {
-    float add = pcurr[s] / psize[s];
+    float add = pcurr[s] / outgoing_size(graph, s);
     #pragma omp atomic
     pnext[d] += add;
     return true;
   }
-  bool updateNoWorries(Vertex s, Vertex d) {
-    pnext[d] += pcurr[s] / psize[s];
+  bool updateNoWorries(Vertex s, Vertex d)
+  {
+    float add = pcurr[s] / outgoing_size(graph, s);
+    pnext[d] += add;
     return true;
   }
   bool cond(Vertex v)
@@ -70,7 +69,7 @@ struct State
   T* pcurr;
   T* pnext;
   T* diff;
-  T* psize;
+
   T damping;
   T convergence;
 };
@@ -105,8 +104,8 @@ void pageRank(Graph g, float* solution, float damping, float convergence)
 {
   int numNodes = num_nodes(g);
   State<float> s(g, damping, convergence);
+
   VertexSet* frontier = newVertexSet(SPARSE, numNodes, numNodes);
-  // #pragma omp parallel for
   for (int i = 0; i < numNodes; i++) {
     addVertex(frontier, i);
   }
@@ -116,19 +115,11 @@ void pageRank(Graph g, float* solution, float damping, float convergence)
     Local<float> local(g, s.pcurr, s.pnext, s.diff, damping, addConst);
 
     VertexSet* frontier2 = edgeMap<State<float> >(g, frontier, s);
-    // VertexSet* frontier3 = vertexMap<Local<float> >(frontier2, local);
-    #pragma omp parallel for
-    for (int i = 0; i < numNodes; ++i)
-    {
-      local.pnext[i] = (damping * local.pnext[i]) + addConst;
-      local.diff[i] = fabs(local.pnext[i] - local.pcurr[i]);
-      local.pcurr[i] = 0.f;
-
-    }
+    VertexSet* frontier3 = vertexMap<Local<float> >(frontier2, local);
 
     freeVertexSet(frontier);
-    // freeVertexSet(frontier2);
-    frontier = frontier2;
+    freeVertexSet(frontier2);
+    frontier = frontier3;
 
     error = s.getError();
     std::swap(s.pcurr, s.pnext);

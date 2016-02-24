@@ -44,28 +44,29 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 	bool *ptrDenseVertices = u->denseVertices;
 	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices)
 	for (int i = 0; i < g->num_nodes; i++) {
-		if (f.cond(i)&&!newDenseVertices[i]) 
+		if (f.cond(i) && !newDenseVertices[i])
 		{
 			const Vertex* start = incoming_begin(g, i);
 			const Vertex* end = incoming_end(g, i);
 			for (const Vertex* v = start; v != end; v++) {
-				if (ptrDenseVertices[*v] == true &&f.cond(i)&& f.updateNoWorries(*v, i)) {
+				if (ptrDenseVertices[*v] == true && f.cond(i) && f.updateNoWorries(*v, i)) {
 					newDenseVertices[i] = true;
+					// break;
 				}
 			}
 		}
 	}
 	int uNumNodes = u->numNodes;
-	int sum_degrees =0;
+	int sum_degrees = 0;
 	#pragma omp parallel for reduction(+:sum,sum_degrees) default(none) shared(uNumNodes, newDenseVertices,g)
 	for (int i = 0; i < uNumNodes; ++i)
 	{
 		if (newDenseVertices[i])
 		{
 			sum += newDenseVertices[i];
-			sum_degrees+=outgoing_size(g, i);
+			sum_degrees += outgoing_size(g, i);
 		}
-		
+
 	}
 	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
 	// }
@@ -75,9 +76,9 @@ template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
                           bool removeDuplicates = true)
 {
-	int threshold = u->numNodes / 20;
+	int threshold = u->numNodes / 10;
 	int sum_degrees;
-	if (u->type==DENSE)
+	if (u->type == DENSE)
 	{
 		sum_degrees = u->sum_degrees;
 		if (u->size + sum_degrees > threshold)
@@ -103,6 +104,8 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	}
 	if (u->size + sum_degrees > threshold)
 	{
+		// printf("DOWN HERE\n");
+
 		updateDense(u, true);
 		delete[] offsets;
 		return edgeMapBottomUp(g, u, f);
@@ -136,14 +139,14 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	}
 	Vertex* newSparseVertices = new Vertex[sum_degrees];
 
-	static bool* tempBoolArray = new bool[u->numNodes]();
+	static bool* tempBoolArray = new bool[threshold]();
 	#pragma omp parallel for default(none) shared(sum_degrees, finalNeighbours, tempBoolArray)
 	for (int i = 0; i < sum_degrees; ++i)
 	{
 		if (finalNeighbours[i] >= 0)
 		{
 			tempBoolArray[i] = true;
-		}else{
+		} else {
 			tempBoolArray[i] = false;
 		}
 	}

@@ -31,7 +31,6 @@ class RadiiUpdate
 
     bool update(Vertex src, Vertex dst) {
       bool changed = false;
-      #pragma simd
       for (int j = 0; j < NUMWORDS; j++) {
         if (visited[dst][j] != visited[src][j]) {
           // word-wide or
@@ -47,7 +46,6 @@ class RadiiUpdate
     }	
     bool updateNoWorries(Vertex src, Vertex dst) {
       bool changed = false;
-      #pragma simd
       for (int j = 0; j < NUMWORDS; j++) {
         if (visited[dst][j] != visited[src][j]) {
           
@@ -76,7 +74,6 @@ class VisitedCopy
       visited(visited), nextVisited(nextVisited) {};
 
     bool operator()(Vertex v) {
-      #pragma simd
       for (int j = 0; j < NUMWORDS; j++) { //parallelize this loop with simd
         visited[v][j] = nextVisited[v][j];
       }
