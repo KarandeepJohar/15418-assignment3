@@ -53,6 +53,9 @@ struct State
   {
     return true;
   }
+  bool iskBFS() {
+      return false;
+  }
 
   T getError()
   {
