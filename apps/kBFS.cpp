@@ -45,7 +45,22 @@ class RadiiUpdate
       }
       return changed;
     }	
-
+    bool updateNoWorries(Vertex src, Vertex dst) {
+      bool changed = false;
+      #pragma simd
+      for (int j = 0; j < NUMWORDS; j++) {
+        if (visited[dst][j] != visited[src][j]) {
+          
+          nextVisited[dst][j]|=(visited[dst][j] | visited[src][j]);
+          int oldRadius = radii[dst];
+          if (radii[dst] == oldRadius) {
+            radii[dst]=iter;
+            changed = true;
+          }
+        }
+      }
+      return changed;
+    } 
     bool cond(Vertex v) {
       return true;
     }

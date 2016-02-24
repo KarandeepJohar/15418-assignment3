@@ -21,10 +21,12 @@ struct State
     pcurr = (T*)(malloc(sizeof(T) * numNodes));
     pnext = (T*)(malloc(sizeof(T) * numNodes));
     diff = (T*)(malloc(sizeof(T) * numNodes));
-
+    psize = (T*)(malloc(sizeof(T) * numNodes));
+    #pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
       pcurr[i] = 1.0 / numNodes;
       pnext[i] = 0.0;
+      psize[i] = outgoing_size(graph, i);
     }
   }
 
@@ -33,16 +35,20 @@ struct State
     free(diff);
     free(pnext);
     free(pcurr);
+    free(psize);
   }
 
   bool update(Vertex s, Vertex d)
   {
-    float add = pcurr[s] / outgoing_size(graph, s);
+    float add = pcurr[s] / psize[s];
     #pragma omp atomic
     pnext[d] += add;
     return true;
   }
-
+  bool updateNoWorries(Vertex s, Vertex d) {
+    pnext[d] += pcurr[s] / psize[s];
+    return true;
+  }
   bool cond(Vertex v)
   {
     return true;
@@ -64,7 +70,7 @@ struct State
   T* pcurr;
   T* pnext;
   T* diff;
-
+  T* psize;
   T damping;
   T convergence;
 };
@@ -72,13 +78,13 @@ struct State
 template <typename T>
 struct Local
 {
-  Local(Graph graph_, T* pcurr_, T* pnext_, T* diff_, T damping_)
-    : graph(graph_), pcurr(pcurr_), pnext(pnext_), diff(diff_), damping(damping_)
+  Local(Graph graph_, T* pcurr_, T* pnext_, T* diff_, T damping_, T addConst_)
+    : graph(graph_), pcurr(pcurr_), pnext(pnext_), diff(diff_), damping(damping_), addConst(addConst_)
   {}
 
   bool operator()(Vertex i)
   {
-    pnext[i] = (damping * pnext[i]) + (1 - damping) / num_nodes(graph);
+    pnext[i] = (damping * pnext[i]) + addConst;
     diff[i] = fabs(pnext[i] - pcurr[i]);
     pcurr[i] = 0.f;
     return true;
@@ -91,6 +97,7 @@ struct Local
 
   T damping;
   T convergence;
+  T addConst;
 };
 
 
@@ -98,22 +105,30 @@ void pageRank(Graph g, float* solution, float damping, float convergence)
 {
   int numNodes = num_nodes(g);
   State<float> s(g, damping, convergence);
-
   VertexSet* frontier = newVertexSet(SPARSE, numNodes, numNodes);
+  // #pragma omp parallel for
   for (int i = 0; i < numNodes; i++) {
     addVertex(frontier, i);
   }
-
+  float addConst = (1 - damping) / numNodes;
   float error = INFINITY;
   while (error > convergence) {
-    Local<float> local(g, s.pcurr, s.pnext, s.diff, damping);
+    Local<float> local(g, s.pcurr, s.pnext, s.diff, damping, addConst);
 
     VertexSet* frontier2 = edgeMap<State<float> >(g, frontier, s);
-    VertexSet* frontier3 = vertexMap<Local<float> >(frontier2, local);
+    // VertexSet* frontier3 = vertexMap<Local<float> >(frontier2, local);
+    #pragma omp parallel for
+    for (int i = 0; i < numNodes; ++i)
+    {
+      local.pnext[i] = (damping * local.pnext[i]) + addConst;
+      local.diff[i] = fabs(local.pnext[i] - local.pcurr[i]);
+      local.pcurr[i] = 0.f;
+
+    }
 
     freeVertexSet(frontier);
-    freeVertexSet(frontier2);
-    frontier = frontier3;
+    // freeVertexSet(frontier2);
+    frontier = frontier2;
 
     error = s.getError();
     std::swap(s.pcurr, s.pnext);

@@ -10,31 +10,39 @@
 
 class Bfs
 {
-  public:
-    Bfs(Graph g, int* solution)
-      : currentDistance(1), distances_(solution)
+public:
+  Bfs(Graph g, int* solution)
+    : currentDistance(1), distances_(solution)
+  {
+#pragma simd
+    for (int i = 0; i < num_nodes(g); i++) {
+      distances_[i] = NA;
+    }
+    distances_[0] = 0;
+  }
+
+  bool update(Vertex src, Vertex dst) {
+    if (distances_[dst] == NA)
+      return __sync_bool_compare_and_swap(&distances_[dst], NA, currentDistance);
+    return false;
+  }
+  bool updateNoWorries(Vertex src, Vertex dst) {
+    if (distances_[dst] == NA)
     {
-      #pragma simd
-      for (int i = 0; i < num_nodes(g); i++) {
-        distances_[i] = NA;
-      }
-      distances_[0] = 0;
+      distances_[dst] = currentDistance;
+      return true;
     }
+    return false;
+  }
 
-    bool update(Vertex src, Vertex dst) {
-      if (distances_[dst] == NA)
-        return __sync_bool_compare_and_swap(&distances_[dst], NA, currentDistance);
-      return false;
-    }
+  bool cond(Vertex v) {
+    return distances_[v] == NA;
+  }
 
-    bool cond(Vertex v) {
-      return distances_[v] == NA;
-    }
+  int currentDistance;
 
-    int currentDistance;
-
-  private:
-    int* distances_;
+private:
+  int* distances_;
 };
 
 
