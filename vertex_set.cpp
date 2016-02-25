@@ -214,6 +214,7 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* 
     vs->sparseUpToDate = true;
     vs->vertices = vertices;
     vs->denseVertices = NULL;
+    vs->sum_degrees=0;
     return vs;
 }
 
@@ -258,8 +259,10 @@ void updateDense(VertexSet *set, bool convert = false) {
         set->denseVertices = new bool[set->numNodes]();
 
     }
-    if (!(set->denseUpToDate))
+    if (!(set->denseUpToDate)){
+        printf("updating dense\n");
         parallel_update_dense(set->denseVertices, set->vertices, set->size, set->numNodes);
+    }
     // set->denseVertices[0];
 
     if (convert)
@@ -273,9 +276,10 @@ void updateSparse(VertexSet *set, bool convert = false ) {
         set->vertices = new Vertex[set->capacity];
 
     }
-    if (!(set->sparseUpToDate))
+    if (!(set->sparseUpToDate)){
+        printf("updating sparse\n");
         parallel_pack_scan(set->vertices, set->denseVertices,  set->size, set->numNodes);
-
+    }
     if (convert)
         set->type = SPARSE;
 
