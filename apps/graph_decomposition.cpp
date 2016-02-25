@@ -10,12 +10,12 @@
 
 **/
 void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
-    VertexSet* frontier = newVertexSet(SPARSE, 1, g->num_nodes);
+    VertexSet* frontier = newVertexSet(DENSE, 1, g->num_nodes);
     addVertex(frontier, maxId); // vertex with maxDu grows first
     int iter = 0;
     bool* claimed_by_ball = new bool[g->num_nodes]();
     int numNodes = g->num_nodes;
-    //#pragma omp parallel for default(none) shared(decomp, numNodes)
+    #pragma omp parallel for default(none) shared(decomp, numNodes)
     for (int i = 0; i< numNodes; i++) {
         decomp[i] = -1;
     }
@@ -27,15 +27,15 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
     while (frontier->size > 0) {
         bool* updatedIn = new bool[g->num_nodes]();
         newFrontier = newVertexSet(SPARSE, 1, numNodes);
-        for(int i=0; i < frontier->numNodes; i++) {
+        #pragma omp parallel for default(none) shared(g, frontier, newFrontier, claimed_by_ball, decomp, updatedIn, numNodes)
+        for(int i=0; i < numNodes; i++) {
             if (frontier->denseVertices[i]) {
-                //printf("Checking %d\n",i);
                 const Vertex* start = outgoing_begin(g, i);
                 const Vertex* end = outgoing_end(g, i);
                 for (const Vertex* v=start; v!=end; v++) {
-                    //printf("Dest %d of %d\n", *v, i);
+                    #pragma omp critical
                     if (!claimed_by_ball[*v] || updatedIn[*v]) {
-                        if (decomp[*v] == -1 || i < decomp[*v]) {
+                        if (decomp[*v] == -1 || decomp[i] < decomp[*v]) {
                             claimed_by_ball[*v] = true;
                             updatedIn[*v] = true;
                             decomp[*v] = decomp[i];
@@ -47,11 +47,12 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
         }
 
         iter++;
-
+        
+        #pragma omp parallel for default(none) shared(newFrontier, claimed_by_ball, decomp, maxVal, numNodes, dus, iter)
         for(int i=0; i<numNodes; i++) {
             if (claimed_by_ball[i] == false) {
+                #pragma omp critical
                 if (iter > (maxVal - dus[i])) {
-                    //printf("Expanding ball %d\n",i);
                     claimed_by_ball[i] = true;
                     decomp[i] = i;
                     addVertex(newFrontier, i);
