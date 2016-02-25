@@ -14,36 +14,31 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
     addVertex(frontier, maxId); // vertex with maxDu grows first
     int iter = 0;
     bool* claimed_by_ball = new bool[g->num_nodes]();
-    //bool* visited = new bool[g->num_nodes]();
-    //int* claimed_by = new int[g->num_nodes]();
-
-    for (int i = 0; i< g->num_nodes; i++) {
+    int numNodes = g->num_nodes;
+    //#pragma omp parallel for default(none) shared(decomp, numNodes)
+    for (int i = 0; i< numNodes; i++) {
         decomp[i] = -1;
     }
+    
+    claimed_by_ball[maxId] = true;
+    decomp[maxId] = maxId;
 
     VertexSet* newFrontier;
     while (frontier->size > 0) {
-       //foreach src vertex on frontier {A
-        newFrontier = newVertexSet(SPARSE, 1, g->num_nodes);
+        bool* updatedIn = new bool[g->num_nodes]();
+        newFrontier = newVertexSet(SPARSE, 1, numNodes);
         for(int i=0; i < frontier->numNodes; i++) {
             if (frontier->denseVertices[i]) {
                 //printf("Checking %d\n",i);
-                if (!claimed_by_ball[i]) {
-                    claimed_by_ball[i] = true;
-                    decomp[i] = i;
-                }
                 const Vertex* start = outgoing_begin(g, i);
                 const Vertex* end = outgoing_end(g, i);
-          //foreach dest vertex of src {
                 for (const Vertex* v=start; v!=end; v++) {
                     //printf("Dest %d of %d\n", *v, i);
-                    if (!claimed_by_ball[*v]) {
-                        //mark dest as claimed by ball of src vertex
-                        if (decomp[*v] == -1){ //|| i < decomp[*v]) {
-                            //printf("Claiming %d by %d\n",*v,decomp[i]);
+                    if (!claimed_by_ball[*v] || updatedIn[*v]) {
+                        if (decomp[*v] == -1 || i < decomp[*v]) {
                             claimed_by_ball[*v] = true;
+                            updatedIn[*v] = true;
                             decomp[*v] = decomp[i];
-                        //add dest to new frontier
                             addVertex(newFrontier, *v);
                         }
                     }
@@ -51,12 +46,9 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
             }
         }
 
-       iter++;
+        iter++;
 
-        // start growing all balls i at the next iter with 
-        //     // unvisited center i and with maxDu - dus[i] < iter 
-        //foreach vertex i in not_visited {
-        for(int i=0; i<g->num_nodes; i++) {
+        for(int i=0; i<numNodes; i++) {
             if (claimed_by_ball[i] == false) {
                 if (iter > (maxVal - dus[i])) {
                     //printf("Expanding ball %d\n",i);
@@ -66,7 +58,10 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
                 }
             }
         }
+        delete[] updatedIn;
         freeVertexSet(frontier);
         frontier = newFrontier;
    }
+
+    delete[] claimed_by_ball;
 }
