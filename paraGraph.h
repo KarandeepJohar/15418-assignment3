@@ -42,18 +42,21 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
 	bool *ptrDenseVertices = u->denseVertices;
-    int chunkSize = std::max(256,u->numNodes/(omp_get_num_threads()*128));
+    int chunkSize = std::max(1,u->numNodes/(omp_get_num_threads()*64));
 
-	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices, chunkSize) schedule(static, chunkSize)
+	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices, chunkSize) schedule(guided)
 	for (int i = 0; i < g->num_nodes; i++) {
-		if (f.iskBFS() || (!ptrDenseVertices[i] && f.cond(i) && !newDenseVertices[i]))
+		if ((f.iskBFS()&&!newDenseVertices[i] && f.cond(i)) || (!ptrDenseVertices[i] && f.cond(i) && !newDenseVertices[i]))
 		{
 			const Vertex* start = incoming_begin(g, i);
 			const Vertex* end = incoming_end(g, i);
-			for (const Vertex* v = start; v != end; v++) {
-				if (ptrDenseVertices[*v] == true && f.cond(i) && f.updateNoWorries(*v, i)) {
+			for (const Vertex* v = start; v != end && f.cond(i); v++) {
+				if (ptrDenseVertices[*v] == true  && f.updateNoWorries(*v, i)) {
 					newDenseVertices[i] = true;
-					// break;
+					if (!f.iskBFS())
+					{
+						break;
+					}
 				}
 			}
 		}
