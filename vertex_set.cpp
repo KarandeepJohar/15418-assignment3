@@ -120,7 +120,7 @@ int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n) {
     sums[0] = 0;
     prefix_sum(sums + 1, boolArray, n);
     int sum = 0;
-    #pragma omp parallel for reduction(+:sum)
+    #pragma omp parallel for reduction(+:sum) schedule(dynamic,256)
     for (int i = 0; i < n; ++i)
     {
         if (boolArray[i])
@@ -180,17 +180,11 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
     vs->sparseUpToDate = false;
     vs->denseUpToDate = false;
     vs->capacity = capacity;
-    if (type == SPARSE)
-    {
-        vs->vertices = new Vertex[capacity];
-        vs->denseVertices = NULL;
-        vs->sparseUpToDate = true;
-
-    } else {
-        vs->denseVertices = new bool[numNodes];
-        vs->vertices = NULL;
-        vs->denseUpToDate = true;
-    }
+    vs->denseVertices =NULL;
+    vs->sparseUpToDate = false;
+    vs->vertices=NULL;
+    vs->denseUpToDate =false;
+    vs->sum_degrees=0;
     return vs;
 }
 
@@ -246,7 +240,7 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
     static Vertex* sums = new Vertex[numNodes + 1];
     sums[0] = 0;
     prefix_sum(sums + 1, dense, numNodes);
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic,256)
     for (int i = 0; i < numNodes; ++i)
     {
         if (dense[i])
@@ -300,7 +294,6 @@ void addVertex(VertexSet *set, Vertex v)
             set->size++;
             ENSURES(set->size <= set->capacity);
             set->denseVertices[v] = true;
-
             set->denseUpToDate = true;
             set->sparseUpToDate = false;
         }
