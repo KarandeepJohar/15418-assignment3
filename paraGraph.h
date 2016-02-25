@@ -54,6 +54,7 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 				if (ptrDenseVertices[*v] == true  && f.updateNoWorries(*v, i)) {
 					newDenseVertices[i] = true;
 				}
+				
 			}
 		}
 	}
