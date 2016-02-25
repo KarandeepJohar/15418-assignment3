@@ -42,9 +42,8 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
 	bool *ptrDenseVertices = u->denseVertices;
-	int chunkSize = std::max(1, u->numNodes / (omp_get_num_threads() * 64));
 
-	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices, chunkSize) schedule(dynamic,256)
+	#pragma omp parallel for default(none) shared(g, f, newDenseVertices, ptrDenseVertices) schedule(dynamic,256)
 	for (int i = 0; i < g->num_nodes; i++) {
 		if (f.cond(i) && !newDenseVertices[i])
 		{
@@ -173,13 +172,14 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 		remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
 	}
 	Vertex* newSparseVertices = new Vertex[sum_degrees];
-
+	int new_sum_degrees=0;
 	static bool* tempBoolArray = new bool[threshold]();
-	#pragma omp parallel for default(none) shared(sum_degrees, finalNeighbours, tempBoolArray)
+	#pragma omp parallel for default(none) shared(sum_degrees, finalNeighbours, tempBoolArray,g) reduction(+:new_sum_degrees)
 	for (int i = 0; i < sum_degrees; ++i)
 	{
 		if (finalNeighbours[i] >= 0)
 		{
+			new_sum_degrees+=outgoing_size(g, i);
 			tempBoolArray[i] = true;
 		} else {
 			tempBoolArray[i] = false;
@@ -187,6 +187,7 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	}
 	int new_sum = packIndices(newSparseVertices,  finalNeighbours, tempBoolArray, sum_degrees);
 	VertexSet *trueResult = newVertexSet(SPARSE, sum_degrees, u->numNodes, newSparseVertices, new_sum);
+	trueResult->sum_degrees = new_sum_degrees;
 	delete[] offsets;
 	delete[] finalNeighbours;
 	return trueResult;
@@ -235,7 +236,9 @@ static VertexSet *vertexMap(VertexSet * u, F & f, bool returnSet = true)
 				}
 			}
 
-			return newVertexSet(SPARSE, sum, u->numNodes, ptrVertices, sum);
+			VertexSet* result =  newVertexSet(SPARSE, sum, u->numNodes, ptrVertices, sum);
+			result->sum_degrees = u->sum_degrees;
+			return result;
 		} else
 		{
 			updateDense(u, true);
