@@ -85,9 +85,6 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
     int i, mynum, last;
     arr = boolArray;
     n = N;
-    // printf("XXXXXXXXXXXXXXXXXXXXXXXX\n");
-    // for(i = 0; i < n; i++)
-    //     printf(" here %d\n", arr[i]);
     #pragma omp parallel default(none) private(i, mynum, last) shared(arr, partial, temp, num_threads, work, n)
     {
         #pragma omp single
@@ -115,9 +112,6 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
         for (i = work * mynum; i < (last = work * mynum + work < n ? work * mynum + work : n); i++)
             arr[i] += partial[mynum] - arr[last - 1];
     }
-    // printf("YAY\n");
-    // for(i = 0; i < n; i++)
-    //     printf("%d\n", arr[i]);
 
 }
 
@@ -240,11 +234,6 @@ void freeVertexSet(VertexSet *set)
 
 void parallel_update_dense( bool* dense, Vertex* sparse,  int size, int numNodes) {
 
-    // #pragma omp parallel for
-    // for (int i = 0; i < numNodes; ++i)
-    // {
-    //     dense[i] = false;
-    // }
     #pragma omp parallel for
     for (int i = 0; i < size ; ++i)
     {
