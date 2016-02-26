@@ -267,7 +267,6 @@ void updateDense(VertexSet *set, bool convert = false) {
 
     }
     if (!(set->denseUpToDate)) {
-        printf("updating dense\n");
         parallel_update_dense(set->denseVertices, set->vertices, set->size, set->numNodes);
     }
     // set->denseVertices[0];
@@ -286,7 +285,6 @@ void updateSparse(VertexSet *set, bool convert = false ) {
     // printf("HAYO\n");
 
     if (!(set->sparseUpToDate)) {
-        printf("updating sparse\n");
         parallel_pack_scan(set->vertices, set->denseVertices,  set->size, set->numNodes);
     }
     if (convert)
@@ -357,11 +355,21 @@ void removeVertex(VertexSet *set, Vertex v)
  */
 VertexSet* vertexUnion(VertexSet *u, VertexSet* v)
 {
-    // TODO: Implement
+   updateDense(u,true);
+    updateDense(v,true);
+    bool* newDense = new bool[u->numNodes]();
+    int size = 0;
+    #pragma omp parallel for reduction(+:size)
+    for (int i=0; i < u->numNodes; i++) {
+        if (u->denseVertices[i] || v->denseVertices[i]) {
+            newDense[i] = true;
+            size += 1;
+        }
+    }
+    VertexSet* vs = newVertexSet(DENSE, size, u->numNodes, newDense, 0);
 
-    // STUDENTS WILL ONLY NEED TO IMPLEMENT THIS FUNCTION IN PART 3 OF
-    // THE ASSIGNMENT
-
-    return NULL;
+    freeVertexSet(u);
+    freeVertexSet(v);
+    return vs;
 }
 
