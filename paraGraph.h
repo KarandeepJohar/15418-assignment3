@@ -38,7 +38,7 @@ template <class F>
 static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
                                   bool removeDuplicates = true)
 {
-	printf("bottom up\n");
+	//printf("bottom up\n");
 	bool* newDenseVertices = new bool[u->numNodes]();
 	int sum = 0;
 	bool *ptrDenseVertices = u->denseVertices;
@@ -86,11 +86,12 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 		updateDense(u, true);
 		return edgeMapBottomUp(g, u, f);
 	}
+	//printf("Converting to Sparse\n");
 	updateSparse(u, true);
 	sum_degrees = 0;
 	Vertex *ptrVertices = u->vertices;
 	int uSize = u->size;
-	printf("topdown\n");
+	//printf("topdown\n");
 
 	// if (removeDuplicates)
 	{	bool* newDenseVertices = new bool[u->numNodes]();
