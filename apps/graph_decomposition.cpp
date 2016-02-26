@@ -25,7 +25,8 @@ class Decompose
         bool flag = false;
         //#pragma omp critical
         if (output[dst]==-1 ) {
-            __sync_bool_compare_and_swap(&thisloop[dst], false, true);
+            //__sync_bool_compare_and_swap(&thisloop[dst], false, true);
+            thisloop[dst] = true;
             __sync_bool_compare_and_swap(&output[dst], -1, output[src]);
             flag=true;
         }
@@ -74,7 +75,7 @@ class vMapFunction
 
     bool operator()(Vertex dst) {
       bool flag = false;
-    #pragma omp critical
+    //#pragma omp critical
       if (output[dst] == -1 && (iterat > (maxV - DUs[dst]))) {
         output[dst] = dst;
           flag = true;
@@ -121,9 +122,10 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
         freeVertexSet(frontier);
         frontier = vertexUnion(newFrontier, newFrontier2);
 
-        #pragma omp parallel for
+        #pragma omp parallel for default(none) shared(numNodes, updatedIn)
         for (int i=0; i<numNodes; i++){
-          updatedIn[i]=false;
+            if (updatedIn[i] = true)
+                updatedIn[i]=false;
         }
    }
 
