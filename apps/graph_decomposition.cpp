@@ -9,60 +9,148 @@
 	are resolved by node id order
 
 **/
+class Decompose
+{
+  public:
+    Graph graph;
+    int* output;
+    bool* thisloop;
+    int nodes;
+
+    Decompose(Graph graph, int* output, bool* thisloop, int nodes) :
+      graph(graph), output(output), thisloop(thisloop), nodes(nodes) {};
+
+    bool update(Vertex src, Vertex dst) {
+        bool flag = false;
+        #pragma omp critical
+        if (output[dst]==-1 || (thisloop[dst] && output[src]<output[dst])) {
+            //thisloop[dst] = true;
+            __sync_bool_compare_and_swap(&thisloop[dst], false, true);
+            __sync_bool_compare_and_swap(&output[dst], -1, output[src]);
+            __sync_bool_compare_and_swap(&output[dst], output[dst], output[src]);
+            //output[dst] = output[src];
+            flag=true;
+        }
+
+        printf("Claiming %d by %d to %d\n", dst, src, output[src]);
+        if (flag) 
+          return true;
+      return false;
+    }
+
+    bool updateNoWorries(Vertex src, Vertex dst) {
+        if (src >= nodes || dst >= nodes) {
+          printf("index exceeded\n");
+        }
+         bool flag = false;
+        #pragma omp critical
+        if (output[dst]==-1 || (thisloop[dst] && output[src]<output[dst])) {
+            printf("Claiming %d by %d to %d\n", dst, src, output[src]);
+            thisloop[dst] = true;
+            output[dst] = output[src];
+            flag=true;
+        }
+        printf("%d\n",output[9911]);
+        if (flag)
+          return true;
+      return false;
+    }
+
+    bool cond(Vertex dst) {
+        return true;
+    }
+};
+class Decompose2
+{
+  public:
+    Graph graph;
+    int* output;
+    int* DUs;
+    int iteration;
+    int maxV;
+
+    Decompose2(Graph graph, int* output, int* DUs, int iteration, int maxV) :
+      graph(graph), output(output), DUs(DUs), iteration(iteration), maxV(maxV) {} ;
+
+    bool cond(Vertex dst) {
+      bool flag = false;
+    #pragma omp critical
+      if (output[dst] == -1 || (iteration > (maxV - DUs[dst])))
+          flag = true;
+      if (flag)
+          return true;
+      return false;
+    }
+};
+
+
 void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
     VertexSet* frontier = newVertexSet(DENSE, 1, g->num_nodes);
+    //VertexSet* allfrontier = newVertexSet(DENSE, 1, g->num_nodes);
     addVertex(frontier, maxId); // vertex with maxDu grows first
     int iter = 0;
-    bool* claimed_by_ball = new bool[g->num_nodes]();
     int numNodes = g->num_nodes;
     #pragma omp parallel for default(none) shared(decomp, numNodes)
     for (int i = 0; i< numNodes; i++) {
         decomp[i] = -1;
     }
-    
-    claimed_by_ball[maxId] = true;
+    //for (int i=0; i< numNodes; i++) {
+    //  addVertex(allfrontier, i);
+    //}
+
     decomp[maxId] = maxId;
+        
+    bool* updatedIn = new bool[g->num_nodes]();
+
+    Decompose2 f2(g, decomp, dus, iter, maxVal);
 
     VertexSet* newFrontier;
     while (frontier->size > 0) {
-        bool* updatedIn = new bool[g->num_nodes]();
-        newFrontier = newVertexSet(SPARSE, 1, numNodes);
-        #pragma omp parallel for default(none) shared(g, frontier, newFrontier, claimed_by_ball, decomp, updatedIn, numNodes)
-        for(int i=0; i < numNodes; i++) {
-            if (frontier->denseVertices[i]) {
-                const Vertex* start = outgoing_begin(g, i);
-                const Vertex* end = outgoing_end(g, i);
-                for (const Vertex* v=start; v!=end; v++) {
-                    #pragma omp critical
-                    if (!claimed_by_ball[*v] || updatedIn[*v]) {
-                        if (decomp[*v] == -1 || decomp[i] < decomp[*v]) {
-                            claimed_by_ball[*v] = true;
-                            updatedIn[*v] = true;
-                            decomp[*v] = decomp[i];
-                            addVertex(newFrontier, *v);
-                        }
-                    }
-                } 
-            }
-        }
-
+    Decompose f(g, decomp, updatedIn, numNodes);
+        //newFrontier = newVertexSet(DENSE, 1, numNodes);
+        //newFrontierV = newVertexSet(DENSE, 1, numNodes);
+        //#pragma omp parallel for default(none) shared(g, frontier, newFrontier,decomp, updatedIn, numNodes)
+        //for(int i=0; i < numNodes; i++) {
+        //    if (frontier->denseVertices[i]) {
+        //        const Vertex* start = outgoing_begin(g, i);
+        //        const Vertex* end = outgoing_end(g, i);
+        //        for (const Vertex* v=start; v!=end; v++) {
+        //            #pragma omp critical
+        //            if (decomp[*v]==-1 || updatedIn[*v] ) {
+        //                if (decomp[*v] == -1 || decomp[i] < decomp[*v]) {
+        //                    updatedIn[*v] = true;
+        //                    decomp[*v] = decomp[i];
+        //                    addVertex(newFrontier, *v);
+        //                }
+        //            }
+        //        } 
+        //    }
+        //}
+        
+        newFrontier = edgeMap<Decompose>(g, frontier, f);
         iter++;
         
-        #pragma omp parallel for default(none) shared(newFrontier, claimed_by_ball, decomp, maxVal, numNodes, dus, iter)
+        #pragma omp parallel for default(none) shared(newFrontier,decomp, maxVal, numNodes, dus, iter)
         for(int i=0; i<numNodes; i++) {
-            if (claimed_by_ball[i] == false) {
+            if (decomp[i] == -1) {
                 #pragma omp critical
                 if (iter > (maxVal - dus[i])) {
-                    claimed_by_ball[i] = true;
                     decomp[i] = i;
                     addVertex(newFrontier, i);
                 }
             }
         }
-        delete[] updatedIn;
+        //newFrontier2 = vertexMap<Decompose2>(g, allfrontier, f2);
         freeVertexSet(frontier);
+
+        //Merge two frontiers:
         frontier = newFrontier;
+
+#pragma omp parallel for
+        for (int i=0; i<numNodes; i++){
+          updatedIn[i]=false;
+        }
    }
 
-    delete[] claimed_by_ball;
+        delete[] updatedIn;
 }
