@@ -349,11 +349,21 @@ void removeVertex(VertexSet *set, Vertex v)
  */
 VertexSet* vertexUnion(VertexSet *u, VertexSet* v)
 {
-    // TODO: Implement
+    updateDense(u,true);
+    updateDense(v,true);
+    bool* newDense = new bool[u->numNodes]();
+    int size = 0;
+    #pragma parallel for reduction(+:sum)
+    for (int i=0; i < u->numNodes; i++) {
+        if (u->denseVertices[i] || v->denseVertices[i]) {
+            newDense[i] = true;
+            size += 1;
+        }
+    }
+    VertexSet* vs = newVertexSet(DENSE, size, u->numNodes, newDense, 0);
 
-    // STUDENTS WILL ONLY NEED TO IMPLEMENT THIS FUNCTION IN PART 3 OF
-    // THE ASSIGNMENT
-
-    return NULL;
+    freeVertexSet(u);
+    freeVertexSet(v);
+    return vs;
 }
 

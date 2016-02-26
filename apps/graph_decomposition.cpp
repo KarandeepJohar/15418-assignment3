@@ -1,4 +1,5 @@
 #include "paraGraph.h"
+#include "vertex_set.h"
 #include "graph.h"
 
 /**
@@ -50,7 +51,6 @@ class Decompose
             output[dst] = output[src];
             flag=true;
         }
-        printf("%d\n",output[9911]);
         if (flag)
           return true;
       return false;
@@ -60,23 +60,26 @@ class Decompose
         return true;
     }
 };
-class Decompose2
+
+class vMapFunction
 {
   public:
     Graph graph;
     int* output;
     int* DUs;
-    int iteration;
+    int iterat;
     int maxV;
 
-    Decompose2(Graph graph, int* output, int* DUs, int iteration, int maxV) :
-      graph(graph), output(output), DUs(DUs), iteration(iteration), maxV(maxV) {} ;
+    vMapFunction(Graph graph, int* output, int* DUs, int iterat, int maxV) :
+      graph(graph), output(output), DUs(DUs), iterat(iterat), maxV(maxV) {} ;
 
-    bool cond(Vertex dst) {
+    bool operator()(Vertex dst) {
       bool flag = false;
     #pragma omp critical
-      if (output[dst] == -1 || (iteration > (maxV - DUs[dst])))
+      if (output[dst] == -1 && (iterat > (maxV - DUs[dst]))) {
+        output[dst] = dst;
           flag = true;
+      }
       if (flag)
           return true;
       return false;
@@ -86,7 +89,7 @@ class Decompose2
 
 void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
     VertexSet* frontier = newVertexSet(DENSE, 1, g->num_nodes);
-    //VertexSet* allfrontier = newVertexSet(DENSE, 1, g->num_nodes);
+    VertexSet* allfrontier = newVertexSet(DENSE, 1, g->num_nodes);
     addVertex(frontier, maxId); // vertex with maxDu grows first
     int iter = 0;
     int numNodes = g->num_nodes;
@@ -94,63 +97,65 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
     for (int i = 0; i< numNodes; i++) {
         decomp[i] = -1;
     }
-    //for (int i=0; i< numNodes; i++) {
-    //  addVertex(allfrontier, i);
-    //}
+    for (int i=0; i< numNodes; i++) {
+      addVertex(allfrontier, i);
+    }
 
     decomp[maxId] = maxId;
         
     bool* updatedIn = new bool[g->num_nodes]();
 
-    Decompose2 f2(g, decomp, dus, iter, maxVal);
 
     VertexSet* newFrontier;
+    VertexSet* newFrontier2;
+
     while (frontier->size > 0) {
-    Decompose f(g, decomp, updatedIn, numNodes);
-        //newFrontier = newVertexSet(DENSE, 1, numNodes);
+        //Decompose f(g, decomp, updatedIn, numNodes);
+        newFrontier = newVertexSet(DENSE, 1, numNodes);
         //newFrontierV = newVertexSet(DENSE, 1, numNodes);
-        //#pragma omp parallel for default(none) shared(g, frontier, newFrontier,decomp, updatedIn, numNodes)
-        //for(int i=0; i < numNodes; i++) {
-        //    if (frontier->denseVertices[i]) {
-        //        const Vertex* start = outgoing_begin(g, i);
-        //        const Vertex* end = outgoing_end(g, i);
-        //        for (const Vertex* v=start; v!=end; v++) {
-        //            #pragma omp critical
-        //            if (decomp[*v]==-1 || updatedIn[*v] ) {
-        //                if (decomp[*v] == -1 || decomp[i] < decomp[*v]) {
-        //                    updatedIn[*v] = true;
-        //                    decomp[*v] = decomp[i];
-        //                    addVertex(newFrontier, *v);
-        //                }
-        //            }
-        //        } 
-        //    }
-        //}
-        
-        newFrontier = edgeMap<Decompose>(g, frontier, f);
-        iter++;
-        
-        #pragma omp parallel for default(none) shared(newFrontier,decomp, maxVal, numNodes, dus, iter)
-        for(int i=0; i<numNodes; i++) {
-            if (decomp[i] == -1) {
-                #pragma omp critical
-                if (iter > (maxVal - dus[i])) {
-                    decomp[i] = i;
-                    addVertex(newFrontier, i);
-                }
+        #pragma omp parallel for default(none) shared(g, frontier, newFrontier,decomp, updatedIn, numNodes)
+        for(int i=0; i < numNodes; i++) {
+            if (frontier->denseVertices[i]) {
+                const Vertex* start = outgoing_begin(g, i);
+                const Vertex* end = outgoing_end(g, i);
+                for (const Vertex* v=start; v!=end; v++) {
+                    #pragma omp critical
+                    if (decomp[*v]==-1 || updatedIn[*v] ) {
+                        if (decomp[*v] == -1 || decomp[i] < decomp[*v]) {
+                            updatedIn[*v] = true;
+                            decomp[*v] = decomp[i];
+                            addVertex(newFrontier, *v);
+                        }
+                    }
+                } 
             }
         }
-        //newFrontier2 = vertexMap<Decompose2>(g, allfrontier, f2);
+        
+        //newFrontier = edgeMap<Decompose>(g, frontier, f);
+        iter++;
+        
+        //#pragma omp parallel for default(none) shared(newFrontier,decomp, maxVal, numNodes, dus, iter)
+        //for(int i=0; i<numNodes; i++) {
+        //    if (decomp[i] == -1) {
+        //        #pragma omp critical
+        //        if (iter > (maxVal - dus[i])) {
+        //            decomp[i] = i;
+        //            addVertex(newFrontier, i);
+        //        }
+        //    }
+        //}
+        vMapFunction vmf(g, decomp, dus, iter, maxVal);
+        newFrontier2 = vertexMap<vMapFunction>(allfrontier, vmf);
         freeVertexSet(frontier);
-
         //Merge two frontiers:
-        frontier = newFrontier;
+        frontier = vertexUnion(newFrontier, newFrontier2);
 
-#pragma omp parallel for
+        #pragma omp parallel for
         for (int i=0; i<numNodes; i++){
           updatedIn[i]=false;
         }
    }
 
         delete[] updatedIn;
+        freeVertexSet(allfrontier);
 }
