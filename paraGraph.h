@@ -138,33 +138,33 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	printf("topdown\n");
 
 
-	// if (removeDuplicates)
-	// {	bool* newDenseVertices = new bool[u->numNodes]();
-	// 	printf("sparsetodense top down\n");
-	// 	int uNumNodes = u->numNodes;
-	// 	int sum_degrees = 0;
-	// 	int sum = 0;
-	// 	#pragma omp parallel default(none)  shared(uSize, ptrVertices, newDenseVertices, f, g, uNumNodes)  reduction(+:sum,sum_degrees)
-	// 	{
-	// 		#pragma omp for schedule(dynamic,256)
-	// 		for (int i = 0; i < uSize; ++i)
-	// 		{
-	// 			Vertex v = ptrVertices[i];
-	// 			const Vertex* start = outgoing_begin(g, v);
-	// 			const Vertex* end = outgoing_end(g, v);
-	// 			for (const Vertex* neigh = start; neigh != end; neigh++) {
-	// 				if (f.cond(*neigh) && f.update(v, *neigh) && !newDenseVertices[*neigh])
-	// 				{
-	// 					sum += 1;
-	// 					sum_degrees += outgoing_size(g, *neigh);
+	if (removeDuplicates)
+	{	bool* newDenseVertices = new bool[u->numNodes]();
+		printf("sparsetodense top down\n");
+		int uNumNodes = u->numNodes;
+		int sum_degrees = 0;
+		int sum = 0;
+		#pragma omp parallel default(none)  shared(uSize, ptrVertices, newDenseVertices, f, g, uNumNodes)  reduction(+:sum,sum_degrees)
+		{
+			#pragma omp for 
+			for (int i = 0; i < uSize; ++i)
+			{
+				Vertex v = ptrVertices[i];
+				const Vertex* start = outgoing_begin(g, v);
+				const Vertex* end = outgoing_end(g, v);
+				for (const Vertex* neigh = start; neigh != end; neigh++) {
+					if (f.cond(*neigh) && f.update(v, *neigh) && !newDenseVertices[*neigh])
+					{
+						sum += 1;
+						sum_degrees += outgoing_size(g, *neigh);
 
-	// 					newDenseVertices[*neigh] = true;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
-	// }
+						newDenseVertices[*neigh] = true;
+					}
+				}
+			}
+		}
+		return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
+	}
 	int* offsets = new int[u->size + 1];
 	int *degrees;
 	degrees = offsets + 1;
@@ -188,24 +188,24 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	int* finalNeighbours = new int[sum_degrees];
 	prefix_sum(offsets, degrees, u->size);
 	offsets[0] = 0;
-	#pragma omp parallel for default(none) shared(g, uSize, ptrVertices, f, offsets, finalNeighbours)
-	for (int i = 0; i < uSize; ++i)
-	{
-		Vertex v = ptrVertices[i];
-		int offset = offsets[i];
-		const Vertex* start = outgoing_begin(g, v);
-		const Vertex* end = outgoing_end(g, v);
-		int j = 0;
-		for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
-			if (f.cond(*neigh) && f.update(v, *neigh))
-			{
-				finalNeighbours[offset + j] = *neigh;
-			}
-			else {
-				finalNeighbours[offset + j] = -1;
-			}
-		}
-	}
+	// #pragma omp parallel for default(none) shared(g, uSize, ptrVertices, f, offsets, finalNeighbours) 
+	// for (int i = 0; i < uSize; ++i)
+	// {
+	// 	Vertex v = ptrVertices[i];
+	// 	int offset = offsets[i];
+	// 	const Vertex* start = outgoing_begin(g, v);
+	// 	const Vertex* end = outgoing_end(g, v);
+	// 	int j = 0;
+	// 	for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
+	// 		if (f.cond(*neigh) && f.update(v, *neigh))
+	// 		{
+	// 			finalNeighbours[offset + j] = *neigh;
+	// 		}
+	// 		else {
+	// 			finalNeighbours[offset + j] = -1;
+	// 		}
+	// 	}
+	// }
 
 	if (removeDuplicates) {
 		remDuplicates(finalNeighbours, sum_degrees, u->numNodes);
@@ -263,7 +263,7 @@ static VertexSet *vertexMap(VertexSet * u, F & f, bool returnSet = true)
 			int uSize = u->size;
 			Vertex* ptrVertices = u->vertices;
 			int j = -1;
-			#pragma omp parallel for default (none) shared(f,uSize, ptrVertices, newVertices,j) reduction(+:sum)
+			#pragma omp parallel for default (none) shared(f,uSize, ptrVertices, newVertices,j) reduction(+:sum) schedule(dynamic,256)
 			for (int i = 0; i < uSize; ++i)
 			{
 
@@ -314,7 +314,7 @@ static VertexSet *vertexMap(VertexSet * u, F & f, bool returnSet = true)
 		else {
 			int uNumNodes = u->numNodes;
 			bool *ptrDenseVertices = u->denseVertices;
-			# pragma omp parallel for default(none) shared(uNumNodes, f, ptrDenseVertices)
+			# pragma omp parallel for default(none) shared(uNumNodes, f, ptrDenseVertices) schedule(dynamic,256)
 			for (int i = 0; i < uNumNodes; ++i)
 			{
 				ptrDenseVertices[i]&&f(i);
