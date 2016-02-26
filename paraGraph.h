@@ -67,11 +67,9 @@ static VertexSet *edgeMapBottomUp(Graph g, VertexSet *u, F &f,
 
 				}
 			}
-
 		}
 	}
 	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
-	// }
 }
 template <class F>
 static VertexSet *edgeMapDenseTopDown(Graph g, VertexSet *u, F &f,
@@ -109,7 +107,6 @@ static VertexSet *edgeMapDenseTopDown(Graph g, VertexSet *u, F &f,
 
 	}
 	return newVertexSet(DENSE, sum ,  u->numNodes, newDenseVertices, sum_degrees);
-	// }
 }
 template <class F>
 static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
@@ -183,24 +180,6 @@ static VertexSet *edgeMap(Graph g, VertexSet * u, F & f,
 	int* finalNeighbours = new int[sum_degrees];
 	prefix_sum(offsets, degrees, u->size);
 	offsets[0] = 0;
-	// #pragma omp parallel for default(none) shared(g, uSize, ptrVertices, f, offsets, finalNeighbours) 
-	// for (int i = 0; i < uSize; ++i)
-	// {
-	// 	Vertex v = ptrVertices[i];
-	// 	int offset = offsets[i];
-	// 	const Vertex* start = outgoing_begin(g, v);
-	// 	const Vertex* end = outgoing_end(g, v);
-	// 	int j = 0;
-	// 	for (const Vertex* neigh = start; neigh != end; neigh++, j++) {
-	// 		if (f.cond(*neigh) && f.update(v, *neigh))
-	// 		{
-	// 			finalNeighbours[offset + j] = *neigh;
-	// 		}
-	// 		else {
-	// 			finalNeighbours[offset + j] = -1;
-	// 		}
-	// 	}
-	// }
 
 	if (removeDuplicates) {
 		remDuplicates(finalNeighbours, sum_degrees, u->numNodes);

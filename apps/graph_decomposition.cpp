@@ -23,21 +23,28 @@ class Decompose
 
     bool update(Vertex src, Vertex dst) {
         bool flag = false;
-        //#pragma omp critical
         if (output[dst]==-1 ) {
-            //__sync_bool_compare_and_swap(&thisloop[dst], false, true);
             thisloop[dst] = true;
-            __sync_bool_compare_and_swap(&output[dst], -1, output[src]);
-            flag=true;
+            int varsrc = output[src];
+            flag = __sync_bool_compare_and_swap(&output[dst], -1, varsrc);
         }
 
         if (flag) 
           return true;
 
-        if(thisloop[dst] && output[src]<output[dst]){
-            __sync_bool_compare_and_swap(&output[dst], output[dst], output[src]);
-            flag = true;
+        while (1) {
+            //Ensure lowest node claims the vertex
+            int var = output[dst];
+            int varsrc = output[src];
+            if(thisloop[dst] && output[src]< var) {
+                flag = __sync_bool_compare_and_swap(&output[dst], var, varsrc);
+            } else {
+                break;
+            }
+            if (flag)
+                return true;
         }
+            
 
         if (flag)
            return true;
@@ -75,9 +82,9 @@ class vMapFunction
 
     bool operator()(Vertex dst) {
       bool flag = false;
-    //#pragma omp critical
       if (output[dst] == -1 && (iterat > (maxV - DUs[dst]))) {
-        output[dst] = dst;
+          //Expand ball and new owners
+          output[dst] = dst;
           flag = true;
       }
       if (flag)
@@ -124,11 +131,11 @@ void decompose(graph *g, int *decomp, int* dus, int maxVal, int maxId) {
 
         #pragma omp parallel for default(none) shared(numNodes, updatedIn)
         for (int i=0; i<numNodes; i++){
-            if (updatedIn[i] = true)
+            if (updatedIn[i] == true)
                 updatedIn[i]=false;
         }
    }
 
-        delete[] updatedIn;
-        freeVertexSet(allfrontier);
+   delete[] updatedIn;
+   freeVertexSet(allfrontier);
 }

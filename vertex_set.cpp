@@ -46,9 +46,6 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
     int i, mynum, last;
     arr = output;
     n = N;
-    // printf("XXXXXXXXXXXXXXXXXXXXXXXX\n");
-    // for(i = 0; i < n; i++)
-    //     printf(" here %d\n", arr[i]);
     #pragma omp parallel default(none) private(i, mynum, last) shared(arr, partial, temp, num_threads, work, n)
     {
         #pragma omp single
@@ -57,7 +54,6 @@ void prefix_sum(Vertex* output, bool* boolArray, int N) {
             partial = (int *) malloc (sizeof (int) * num_threads);
             temp = (int *) malloc (sizeof (int) * num_threads);
             work = n / num_threads + 1; /*sets length of sub-arrays*/
-            // printf("YES\n");
         }
         mynum = omp_get_thread_num();
         /*calculate prefix-sum for each subarray*/
@@ -93,7 +89,6 @@ void prefix_sum(Vertex* output, int* boolArray, int N) {
             partial = (int *) malloc (sizeof (int) * num_threads);
             temp = (int *) malloc (sizeof (int) * num_threads);
             work = n / num_threads + 1; /*sets length of sub-arrays*/
-            // printf("YES\n");
         }
         mynum = omp_get_thread_num();
         /*calculate prefix-sum for each subarray*/
@@ -169,7 +164,6 @@ void remDuplicates(Vertex* input, int size, int numNodes) {
             }
         }
     }
-// delete[] flags;
 }
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes)
 {
@@ -227,8 +221,6 @@ VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* 
 
 void freeVertexSet(VertexSet *set)
 {
-
-    // delete set->vertices;
     delete[] set->denseVertices;
     delete[] set->vertices;
     delete set;
@@ -256,7 +248,6 @@ void parallel_pack_scan(Vertex* sparse, bool* dense, int size, int numNodes) {
             sparse[sums[i]] = i;
         }
     }
-    // delete[] sums;
 }
 
 
@@ -269,7 +260,6 @@ void updateDense(VertexSet *set, bool convert = false) {
     if (!(set->denseUpToDate)) {
         parallel_update_dense(set->denseVertices, set->vertices, set->size, set->numNodes);
     }
-    // set->denseVertices[0];
 
     if (convert)
         set->type = DENSE;
@@ -282,7 +272,6 @@ void updateSparse(VertexSet *set, bool convert = false ) {
         set->vertices = new Vertex[set->capacity];
 
     }
-    // printf("HAYO\n");
 
     if (!(set->sparseUpToDate)) {
         parallel_pack_scan(set->vertices, set->denseVertices,  set->size, set->numNodes);
@@ -296,11 +285,9 @@ void updateSparse(VertexSet *set, bool convert = false ) {
 void addVertex(VertexSet *set, Vertex v)
 {   //this will convert it into dense
 
-    // printf("addVertex\n");
     updateDense(set, true);
     if (set->capacity>set->numNodes/100 || set->type ==DENSE)
     {
-        // updateDense(set, true);
         if (set->denseVertices[v] == false)
         {
             set->size++;
@@ -355,7 +342,7 @@ void removeVertex(VertexSet *set, Vertex v)
  */
 VertexSet* vertexUnion(VertexSet *u, VertexSet* v)
 {
-   updateDense(u,true);
+    updateDense(u,true);
     updateDense(v,true);
     bool* newDense = new bool[u->numNodes]();
     int size = 0;
