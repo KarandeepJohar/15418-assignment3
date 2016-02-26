@@ -21,7 +21,7 @@ typedef struct {
 } VertexSet;
 
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes);
-VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* denseVertices, int sum_degrees=-1);
+VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, bool* denseVertices, int sum_degrees);
 VertexSet *newVertexSet(VertexSetType type, int capacity, int numNodes, Vertex* vertices, int size);
 int packIndices(Vertex* output, Vertex* input, bool* boolArray, int n);
 

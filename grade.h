@@ -1,4 +1,3 @@
-
 #ifndef __GRADE_H__
 #define __GRADE_H__
 
@@ -87,88 +86,6 @@ static double refTimeTable[4][4][3] = {
 
 // Original reference time used for extra credit.
 static double refExtraTimeTable[4][4][3] = {
-  // BFS
-  {
-    // com-orkut_117m.graph
-    {0.2078, 0.1357, 0.2209}, // adjusted
-    // soc-livejournal1_68m
-    {0.2347, 0.2123, 0.2704},
-    // rmat_200m
-    {1.5444, 1.0811, 1.0658},
-    // soc-pokec_30m
-    {0.1962, 0.1760, 0.2879} // adjusted
-  },
-  // PAGERANK
-  {
-    // com-orkut_117m.graph
-    {3.5203, 2.0160, 1.3421}, // adjusted
-    // soc-livejournal1_68m
-    {1.9369, 1.1051, 0.7757},
-    // rmat_200m
-    {11.3733, 6.3221, 4.3275},
-    // soc-pokec_30m
-    {1.1019, 0.6059, 0.4016} // adjusted
-  },
-  // KBFS
-  {
-    // com-orkut_117m.graph
-    {39.9503, 25.5576, 18.8067}, // adjusted
-    // soc-livejournal1_68m
-    {9.8073, 7.9282, 7.6994}, // adjusted
-    // rmat_200m
-    {66.0763, 49.6047, 44.6521},
-    // soc-pokec_30m
-    {4.3053, 3.4722, 3.1474}
-  },
-  // DECOMP
-  {
-    // com-orkut_117m.graph
-    {2.9623, 2.3680, 2.1731},
-    // soc-livejournal1_68m
-    {2.9650, 2.6828, 2.6310},
-    // rmat_200m
-    {20.4276, 18.0206, 17.2282},
-    // soc-pokec_30m
-    {1.1637, 1.0159, 1.0074}
-  }
-};
-
-// Get index into refTimeTable for a given number of threads.
-static int getThreadIndex(int numThreads) {
-  if (numThreads == 64)
-    return 0;
-  else if (numThreads == 128)
-    return 1;
-  return 2;
-}
-
-// Get index into refTimeTable for a given graph.
-static int getGraphIndex(Graph g) {
-  // com-orkut_117m.graph
-  if (num_nodes(g) == 3072441)
-    return 0;
-  // soc-livejournal1_68m
-  if (num_nodes(g) == 4847571)
-    return 1;
-  // rmat_200m
-  if (num_nodes(g) == 33554432)
-    return 2;
-  // soc-pokec_30m
-  if (num_nodes(g) == 1632803)
-    return 3;
-  
-  // Should not get here.
-  ENSURES(false);
-  return -1;
-}
-
-/*
- * Reference times on the phi
- * For grading student performance when the reference is not run.
- * Indexed by [APP][graph][number of threads (64, 128, 236)]
- */
-// TODO(kku): Ugly hard-coded size
-static double refTimeTable[4][4][3] = {
   // BFS
   {
     // com-orkut_117m.graph
@@ -543,5 +460,4 @@ double timeApp(Graph g, int device, int numTrials, double maxPoints,
 
   return points;
 }
-
 #endif /* __GRADE_H__ */
